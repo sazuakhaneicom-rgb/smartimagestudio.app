@@ -22,8 +22,7 @@ const FIREBASE_DB_URL = "https://smart-image-73059-default-rtdb.firebaseio.com";
 const LOCAL_STORAGE_KEY = "smart_image_analytics_v1";
 const LAST_REFRESH_KEY = "smart_image_last_refresh_timestamp";
 
-// Global flag to stop polling if Firebase rules block access (prevents console spam)
-let firebaseAuthError = false;
+// Removed global flag to decouple API endpoints
 
 // Create client session ID
 const CLIENT_SESSION_ID = typeof window !== 'undefined' 
@@ -103,7 +102,7 @@ export const trackGeneration = async (category: Category) => {
 
 // 2. Send Heartbeat (Active User Tracking)
 export const sendClientHeartbeat = async () => {
-  if (typeof window === 'undefined' || firebaseAuthError) return;
+  if (typeof window === 'undefined') return;
 
   const now = Date.now();
 
@@ -128,10 +127,8 @@ export const listenToRemoteRefresh = (onRefreshSignal: () => void) => {
   const initialRefreshTime = Number(localStorage.getItem(LAST_REFRESH_KEY) || 0);
 
   const checkSignal = async () => {
-    if (firebaseAuthError) return;
     try {
       const res = await fetch(`${FIREBASE_DB_URL}/system/forceRefreshTimestamp.json?t=${Date.now()}`);
-      if (res.status === 401 || res.status === 403) firebaseAuthError = true;
       if (res.ok) {
         const serverTimestamp = await res.json();
         
@@ -196,7 +193,6 @@ export const triggerRemoteRefreshAllClients = async (): Promise<boolean> => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newTimestamp)
     });
-    if (res.status === 401 || res.status === 403) firebaseAuthError = true;
     return res.ok;
   } catch (e) {
     console.error('Failed to update remote refresh timestamp', e);
@@ -209,25 +205,12 @@ export const getAnalyticsSummary = async (): Promise<AnalyticsSummary> => {
   const local = getLocalData();
   const now = Date.now();
 
-  if (firebaseAuthError) {
-    return {
-      activeUsers: 1,
-      totalGenerations: local.totalGenerations,
-      breakdown: local.breakdown,
-      lastRemoteRefresh: 0
-    };
-  }
-
   try {
     const [genRes, sessRes, refreshRes] = await Promise.all([
       fetch(`${FIREBASE_DB_URL}/analytics/generations.json`),
       fetch(`${FIREBASE_DB_URL}/sessions.json`),
       fetch(`${FIREBASE_DB_URL}/system/forceRefreshTimestamp.json`)
     ]);
-
-    if (genRes.status === 401 || sessRes.status === 401 || refreshRes.status === 401) {
-      firebaseAuthError = true;
-    }
 
     const genData = await genRes.json() || {};
     const sessData = await sessRes.json() || {};
@@ -317,11 +300,7 @@ export const getFeatureFlags = async (): Promise<FeatureFlags> => {
   } catch (e) {}
 
   try {
-    if (firebaseAuthError) {
-      return localFlags ? { ...defaultFeatureFlags, ...localFlags } : defaultFeatureFlags;
-    }
     const res = await fetch(`${FIREBASE_DB_URL}/system/featureFlags.json?t=${Date.now()}`);
-    if (res.status === 401 || res.status === 403) firebaseAuthError = true;
     if (res.ok) {
       const data = await res.json();
       // Ensure we don't process an error object from firebase if rules are restrictive
@@ -354,7 +333,6 @@ export const saveAllFeatureFlags = async (flags: FeatureFlags): Promise<boolean>
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(flags)
     });
-    if (res.status === 401 || res.status === 403) firebaseAuthError = true;
     return res.ok;
   } catch (e) {
     return false;
