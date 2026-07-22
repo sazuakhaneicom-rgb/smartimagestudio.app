@@ -43,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="bn" suppressHydrationWarning>
       <body 
-        className={`${anekBangla.variable} ${outfit.variable} ${inter.variable} h-[100dvh] overflow-hidden bg-background text-text-primary font-sans transition-colors`}
+        className={`${anekBangla.variable} ${outfit.variable} ${inter.variable} min-h-[100dvh] lg:h-[100dvh] overflow-x-hidden lg:overflow-hidden bg-background text-text-primary font-sans transition-colors`}
         data-lang="bn"
       >
         <Providers>

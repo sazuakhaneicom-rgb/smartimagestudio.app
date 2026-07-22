@@ -35,7 +35,7 @@ export default function WorkspacePage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       <Header />
-      <main className="flex-1 flex flex-col lg:flex-row p-4 pt-24 lg:pt-4 gap-4 max-h-none lg:max-h-[calc(100vh-72px)] overflow-y-auto lg:overflow-hidden relative">
+      <main className="flex-1 flex flex-col lg:flex-row p-4 pt-24 lg:pt-4 gap-4 max-h-none lg:max-h-[calc(100vh-72px)] lg:overflow-hidden relative">
         <div className="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 min-h-[50vh] lg:min-h-0">
           <div className="p-4 border-b border-gray-100 flex items-center justify-between">
             <button

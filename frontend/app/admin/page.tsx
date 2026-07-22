@@ -253,7 +253,7 @@ export default function AdminPage() {
 
   // --- DASHBOARD SCREEN (Scrollable Container Fix) ---
   return (
-    <div className="h-screen w-full bg-[#0B0713] text-gray-100 font-sans p-4 sm:p-8 relative overflow-y-auto overflow-x-hidden">
+    <div className="min-h-[100dvh] lg:h-screen w-full bg-[#0B0713] text-gray-100 font-sans p-4 sm:p-8 relative lg:overflow-y-auto overflow-x-hidden">
       
       {/* Background gradients */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
