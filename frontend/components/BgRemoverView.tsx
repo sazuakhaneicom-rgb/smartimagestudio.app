@@ -282,12 +282,23 @@ export default function BgRemoverView() {
         <div className="w-full glass-panel rounded-[2rem] overflow-hidden p-3 sm:p-5 relative">
           
           {/* Compare Slider Container */}
-          <div className="relative w-full flex justify-center max-h-[45vh] rounded-2xl overflow-hidden shadow-2xl border border-white/20 checkerboard bg-black/5 dark:bg-white/5">
-            <ReactCompareSlider
-              itemOne={<ReactCompareSliderImage src={originalUrl} alt="Original" style={{ objectFit: 'contain', width: '100%', height: '100%', maxHeight: '45vh' }} />}
-              itemTwo={<ReactCompareSliderImage src={resultUrl} alt="Removed Background" style={{ objectFit: 'contain', width: '100%', height: '100%', maxHeight: '45vh' }} />}
-              className="w-full h-auto max-h-[45vh]"
-            />
+          <div className="relative w-full flex justify-center">
+            <div className="relative inline-block max-w-full rounded-2xl overflow-hidden shadow-2xl border border-white/20 checkerboard bg-black/5 dark:bg-white/5">
+              {/* Invisible spacer image to dictate exact bounds */}
+              <img 
+                src={originalUrl} 
+                className="block w-auto h-auto max-h-[45vh] max-w-full opacity-0 pointer-events-none select-none" 
+                alt="spacer" 
+              />
+              {/* Slider fills the exact bounds of the spacer */}
+              <div className="absolute inset-0">
+                <ReactCompareSlider
+                  itemOne={<ReactCompareSliderImage src={originalUrl} alt="Original" style={{ objectFit: 'fill', width: '100%', height: '100%' }} />}
+                  itemTwo={<ReactCompareSliderImage src={resultUrl} alt="Removed Background" style={{ objectFit: 'fill', width: '100%', height: '100%' }} />}
+                  className="w-full h-full"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="mt-4 flex flex-col gap-4 items-center justify-center">
