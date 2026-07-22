@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Check, ZoomIn, ZoomOut, Eraser, Brush, Undo2, Redo2, RotateCcw, MousePointer2 } from 'lucide-react';
+import { X, Undo2, Redo2, MousePointer2, Plus, Minus, Eraser, Brush } from 'lucide-react';
 
 interface ManualMaskEditorProps {
   originalUrl: string;
@@ -20,6 +20,8 @@ export default function ManualMaskEditor({ originalUrl, maskUrl, onSave, onCance
   const [isLoaded, setIsLoaded] = useState(false);
   const [tool, setTool] = useState<Tool>('erase');
   const [brushSize, setBrushSize] = useState(40);
+  const [brushHardness, setBrushHardness] = useState(100);
+  const [showOriginalBg, setShowOriginalBg] = useState(false);
   
   // Pan and Zoom states
   const [scale, setScale] = useState(1);
@@ -55,20 +57,16 @@ export default function ManualMaskEditor({ originalUrl, maskUrl, onSave, onCance
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return;
 
-      // Set canvas to actual image resolution
       canvas.width = origImg.width;
       canvas.height = origImg.height;
 
-      // Draw initial mask
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(maskImg, 0, 0);
 
-      // Save initial state to undo stack
       const initialState = ctx.getImageData(0, 0, canvas.width, canvas.height);
       setUndoStack([initialState]);
       setRedoStack([]);
 
-      // Create offscreen canvas for restore pattern
       const pCanvas = document.createElement('canvas');
       pCanvas.width = origImg.width;
       pCanvas.height = origImg.height;
@@ -78,7 +76,6 @@ export default function ManualMaskEditor({ originalUrl, maskUrl, onSave, onCance
         patternCanvasRef.current = pCanvas;
       }
 
-      // Initial fit to screen
       if (containerRef.current) {
         const container = containerRef.current.getBoundingClientRect();
         const scaleX = (container.width * 0.85) / origImg.width;
@@ -93,21 +90,16 @@ export default function ManualMaskEditor({ originalUrl, maskUrl, onSave, onCance
     loadImages();
   }, [originalUrl, maskUrl]);
 
-  // Handle Zoom with mouse wheel
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
     const zoomSensitivity = 0.0015;
     const delta = -e.deltaY * zoomSensitivity;
     let newScale = scale * Math.exp(delta);
-    
-    // Limits
     newScale = Math.max(0.1, Math.min(newScale, 10));
     setScale(newScale);
   }, [scale]);
 
-  // Coordinate conversion
   const getCanvasPos = (e: React.PointerEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
@@ -120,7 +112,6 @@ export default function ManualMaskEditor({ originalUrl, maskUrl, onSave, onCance
     };
   };
 
-  // Push history state after drawing stroke
   const saveHistoryState = () => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d', { willReadFrequently: true });
@@ -129,16 +120,14 @@ export default function ManualMaskEditor({ originalUrl, maskUrl, onSave, onCance
     const currentState = ctx.getImageData(0, 0, canvas.width, canvas.height);
     setUndoStack(prev => {
       const next = [...prev, currentState];
-      if (next.length > 20) return next.slice(next.length - 20); // max 20 steps
+      if (next.length > 20) return next.slice(next.length - 20);
       return next;
     });
-    setRedoStack([]); // clear redo stack on new action
+    setRedoStack([]);
   };
 
-  // Undo function
   const undo = useCallback(() => {
     if (undoStack.length <= 1) return;
-    
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d', { willReadFrequently: true });
     if (!canvas || !ctx) return;
@@ -154,10 +143,8 @@ export default function ManualMaskEditor({ originalUrl, maskUrl, onSave, onCance
     setRedoStack(prev => [...prev, currentState]);
   }, [undoStack]);
 
-  // Redo function
   const redo = useCallback(() => {
     if (redoStack.length === 0) return;
-
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d', { willReadFrequently: true });
     if (!canvas || !ctx) return;
@@ -172,15 +159,11 @@ export default function ManualMaskEditor({ originalUrl, maskUrl, onSave, onCance
     setRedoStack(newRedoStack);
   }, [redoStack]);
 
-  // Keyboard shortcuts (Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-        if (e.shiftKey) {
-          redo();
-        } else {
-          undo();
-        }
+        if (e.shiftKey) redo();
+        else undo();
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
         redo();
       }
@@ -189,15 +172,13 @@ export default function ManualMaskEditor({ originalUrl, maskUrl, onSave, onCance
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
 
-  // Pointer Events
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.button === 1 || tool === 'pan') {
       setIsDraggingPan(true);
       panStartRef.current = { x: e.clientX - position.x, y: e.clientY - position.y };
       return;
     }
-
-    if (e.button !== 0) return; // Only left click for drawing
+    if (e.button !== 0) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -229,15 +210,12 @@ export default function ManualMaskEditor({ originalUrl, maskUrl, onSave, onCance
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
-    if (isDraggingPan) {
-      setIsDraggingPan(false);
-    }
-    
+    if (isDraggingPan) setIsDraggingPan(false);
     if (isDrawing) {
       setIsDrawing(false);
       lastPosRef.current = null;
       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-      saveHistoryState(); // Save state after stroke completion
+      saveHistoryState();
     }
   };
 
@@ -251,6 +229,12 @@ export default function ManualMaskEditor({ originalUrl, maskUrl, onSave, onCance
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.lineWidth = brushSize;
+    
+    if (brushHardness < 100) {
+      ctx.shadowBlur = (100 - brushHardness) * (brushSize / 50);
+      ctx.shadowColor = 'black'; 
+    }
+
     ctx.moveTo(start.x, start.y);
     ctx.lineTo(end.x, end.y);
 
@@ -276,163 +260,44 @@ export default function ManualMaskEditor({ originalUrl, maskUrl, onSave, onCance
     onSave(newUrl);
   };
 
-  const handleResetAll = () => {
-    if (undoStack.length === 0) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d', { willReadFrequently: true });
-    if (!canvas || !ctx) return;
-
-    const initial = undoStack[0];
-    ctx.putImageData(initial, 0, 0);
-    setUndoStack([initial]);
-    setRedoStack([]);
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-gray-950/95 backdrop-blur-xl select-none">
+    <div className="fixed inset-0 z-50 flex bg-[#f8f9fa] dark:bg-gray-950 select-none font-sans">
       
       {/* Dynamic Circular Cursor Overlay */}
       {isHoveringWorkspace && cursorPos && (tool === 'erase' || tool === 'restore') && (
         <div
-          className="fixed pointer-events-none rounded-full transform -translate-x-1/2 -translate-y-1/2 z-50 border-2 transition-[width,height] duration-75 ease-out"
+          className="fixed pointer-events-none rounded-full transform -translate-x-1/2 -translate-y-1/2 z-50 transition-[width,height] duration-75 ease-out"
           style={{
             left: `${cursorPos.x}px`,
             top: `${cursorPos.y}px`,
             width: `${brushSize * scale}px`,
             height: `${brushSize * scale}px`,
-            borderColor: tool === 'erase' ? '#ec4899' : '#6366f1',
-            backgroundColor: tool === 'erase' ? 'rgba(236,72,153,0.15)' : 'rgba(99,102,241,0.15)',
-            boxShadow: tool === 'erase' 
-              ? '0 0 15px rgba(236,72,153,0.6), inset 0 0 10px rgba(236,72,153,0.3)' 
-              : '0 0 15px rgba(99,102,241,0.6), inset 0 0 10px rgba(99,102,241,0.3)'
+            border: '2px solid rgba(0,0,0,0.5)',
+            boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.5), 0 0 0 1px rgba(255,255,255,0.5)',
+            backgroundColor: 'transparent'
           }}
-        >
-          <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-white shadow-sm" />
-        </div>
+        />
       )}
 
-      {/* Header Toolbar */}
-      <div className="flex-none bg-[#12121A] border-b border-gray-800 p-4 flex flex-wrap items-center justify-between gap-4 shadow-2xl relative z-10">
-        
-        {/* Tool Selectors */}
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setTool('erase')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-extrabold text-sm transition-all duration-300 ${tool === 'erase' ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg shadow-pink-500/30 scale-105' : 'bg-[#1D1D28] text-gray-400 hover:text-white hover:bg-gray-800'}`}
-          >
-            <Eraser className="w-4 h-4" /> ইরেজার (Erase)
-          </button>
-          
-          <button 
-            onClick={() => setTool('restore')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-extrabold text-sm transition-all duration-300 ${tool === 'restore' ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30 scale-105' : 'bg-[#1D1D28] text-gray-400 hover:text-white hover:bg-gray-800'}`}
-          >
-            <Brush className="w-4 h-4" /> রিস্টোর (Restore)
-          </button>
-
-          <button 
-            onClick={() => setTool('pan')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-extrabold text-sm transition-all duration-300 ${tool === 'pan' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30 scale-105' : 'bg-[#1D1D28] text-gray-400 hover:text-white hover:bg-gray-800'}`}
-            title="Pan Image"
-          >
-            <MousePointer2 className="w-4 h-4" /> সরান (Pan)
-          </button>
-
-          <div className="w-[1px] h-8 bg-gray-800 mx-2" />
-
-          {/* Undo / Redo Buttons */}
-          <div className="flex items-center gap-1 bg-[#1A1A24] p-1 rounded-xl border border-gray-800">
-            <button 
-              onClick={undo}
-              disabled={undoStack.length <= 1}
-              className={`p-2 rounded-lg font-bold flex items-center gap-1 text-xs transition-all ${undoStack.length <= 1 ? 'text-gray-600 cursor-not-allowed opacity-50' : 'text-gray-200 hover:bg-gray-800 hover:text-white active:scale-95'}`}
-              title="Undo (Ctrl+Z)"
-            >
-              <Undo2 className="w-4 h-4 text-emerald-400" />
-              <span>আন্ডু</span>
-            </button>
-
-            <button 
-              onClick={redo}
-              disabled={redoStack.length === 0}
-              className={`p-2 rounded-lg font-bold flex items-center gap-1 text-xs transition-all ${redoStack.length === 0 ? 'text-gray-600 cursor-not-allowed opacity-50' : 'text-gray-200 hover:bg-gray-800 hover:text-white active:scale-95'}`}
-              title="Redo (Ctrl+Y)"
-            >
-              <Redo2 className="w-4 h-4 text-emerald-400" />
-              <span>রিডু</span>
-            </button>
-
-            <button 
-              onClick={handleResetAll}
-              disabled={undoStack.length <= 1}
-              className={`p-2 rounded-lg font-bold flex items-center gap-1 text-xs transition-all ${undoStack.length <= 1 ? 'text-gray-600 cursor-not-allowed opacity-50' : 'text-gray-400 hover:bg-gray-800 hover:text-red-400 active:scale-95'}`}
-              title="Reset All Changes"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Brush Size Controller */}
-        <div className="flex items-center gap-4 bg-[#1A1A24] px-5 py-2 rounded-2xl border border-gray-800 shadow-inner">
-          <span className="text-gray-300 text-xs font-extrabold uppercase tracking-wider">ব্রাশ সাইজ:</span>
-          <input 
-            type="range" 
-            min="5" 
-            max="250" 
-            value={brushSize} 
-            onChange={(e) => setBrushSize(Number(e.target.value))}
-            className="w-36 accent-pink-500 cursor-pointer"
-          />
-          <span className="text-pink-400 font-mono text-xs font-bold w-8">{brushSize}px</span>
-        </div>
-
-        {/* Zoom and Actions */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center bg-[#1A1A24] rounded-xl border border-gray-800 p-1">
-            <button 
-              onClick={() => setScale(s => Math.max(0.1, s * 0.8))}
-              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
-            >
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <span className="text-gray-300 font-mono text-xs px-2 font-bold">{Math.round(scale * 100)}%</span>
-            <button 
-              onClick={() => setScale(s => Math.min(10, s * 1.2))}
-              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="w-[1px] h-8 bg-gray-800 mx-1" />
-
-          <button 
-            onClick={onCancel}
-            className="px-4 py-2 text-gray-400 hover:text-white font-bold text-sm transition-colors"
-          >
-            বাতিল
-          </button>
-          <button 
-            onClick={handleSave}
-            className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
-          >
-            <Check className="w-4 h-4" /> সেভ করুন
-          </button>
-        </div>
-      </div>
-
-      {/* Main Interactive Canvas Workspace */}
+      {/* Workspace Left Area */}
       <div 
         ref={containerRef}
-        className="flex-1 relative overflow-hidden checkerboard flex items-center justify-center touch-none cursor-none"
+        className="flex-1 relative overflow-hidden checkerboard flex flex-col items-center justify-center touch-none cursor-crosshair"
         onWheel={handleWheel}
         onMouseEnter={() => setIsHoveringWorkspace(true)}
         onMouseLeave={() => setIsHoveringWorkspace(false)}
       >
+        {/* Top left cancel button */}
+        <button 
+          onClick={onCancel}
+          className="absolute top-6 left-6 z-30 w-10 h-10 bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-full flex items-center justify-center text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
         {!isLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-950/70 backdrop-blur-md z-20">
-            <div className="text-emerald-400 font-extrabold animate-pulse text-lg">মাস্ক এডিটর লোডিং...</div>
+          <div className="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-md z-20">
+            <div className="text-gray-500 font-bold animate-pulse">Loading editor...</div>
           </div>
         )}
 
@@ -443,8 +308,7 @@ export default function ManualMaskEditor({ originalUrl, maskUrl, onSave, onCance
             transformOrigin: 'center'
           }}
         >
-          {/* Background original image for reference */}
-          {originalUrl && (
+          {showOriginalBg && originalUrl && (
             <img 
               src={originalUrl} 
               alt="Original Reference" 
@@ -452,33 +316,143 @@ export default function ManualMaskEditor({ originalUrl, maskUrl, onSave, onCance
             />
           )}
 
-          {/* Mask Editing Canvas */}
           <canvas
             ref={canvasRef}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
-            className={`shadow-[0_0_80px_rgba(0,0,0,0.8)] touch-none rounded-lg relative z-10 ${
+            className={`shadow-sm touch-none relative z-10 ${
               tool === 'pan' || isDraggingPan ? 'cursor-grab active:cursor-grabbing' : 'cursor-none'
             }`}
-            style={{
-              imageRendering: 'pixelated'
-            }}
+            style={{ imageRendering: 'pixelated' }}
           />
         </div>
 
-        {/* Floating Controls Bar */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-xl px-6 py-3 rounded-full border border-white/10 text-gray-300 text-xs font-semibold flex items-center gap-5 shadow-2xl pointer-events-none z-20">
-          <span className="flex items-center gap-1.5"><span className="text-pink-400 font-bold">🖱️ মাউস ড্র্যাগ:</span> ব্রাশ মুছুন/ফিরিয়ে আনুন</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-gray-600" />
-          <span className="flex items-center gap-1.5"><span className="text-emerald-400 font-bold">⌨️ Ctrl + Z:</span> আন্ডু</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-gray-600" />
-          <span className="flex items-center gap-1.5"><span className="text-emerald-400 font-bold">⌨️ Ctrl + Y:</span> রিডু</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-gray-600" />
-          <span className="flex items-center gap-1.5"><span className="text-amber-400 font-bold">🖱️ হুইল:</span> জুম ইন/আউট</span>
+        {/* Floating Bottom Toolbar (Undo/Redo/Zoom/Pan) */}
+        <div className="absolute bottom-8 z-30 flex items-center gap-1 bg-white dark:bg-gray-900 shadow-lg border border-gray-200 dark:border-gray-800 px-3 py-1.5 rounded-2xl">
+          <button onClick={undo} disabled={undoStack.length <= 1} className="p-2 text-gray-500 hover:text-black dark:hover:text-white disabled:opacity-30 transition-colors">
+            <Undo2 className="w-4 h-4" />
+          </button>
+          <button onClick={redo} disabled={redoStack.length === 0} className="p-2 text-gray-500 hover:text-black dark:hover:text-white disabled:opacity-30 transition-colors">
+            <Redo2 className="w-4 h-4" />
+          </button>
+          
+          <div className="w-[1px] h-6 bg-gray-200 dark:bg-gray-800 mx-2" />
+          
+          <button onClick={() => setScale(s => Math.max(0.1, s * 0.8))} className="p-2 text-gray-500 hover:text-black dark:hover:text-white transition-colors">
+            <Minus className="w-4 h-4" />
+          </button>
+          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 w-12 text-center select-none">
+            {Math.round(scale * 100)}%
+          </span>
+          <button onClick={() => setScale(s => Math.min(10, s * 1.2))} className="p-2 text-gray-500 hover:text-black dark:hover:text-white transition-colors">
+            <Plus className="w-4 h-4" />
+          </button>
+          
+          <div className="w-[1px] h-6 bg-gray-200 dark:bg-gray-800 mx-2" />
+          
+          <button onClick={() => setTool(tool === 'pan' ? 'erase' : 'pan')} className={`p-2 rounded-xl transition-all ${tool === 'pan' ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}>
+            <MousePointer2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
+
+      {/* Right Sidebar Area */}
+      <div className="w-[320px] bg-white dark:bg-gray-900 shadow-2xl flex flex-col z-40 border-l border-gray-200 dark:border-gray-800">
+        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-8 mt-2">
+          
+          {/* Tool Selection */}
+          <div>
+            <h3 className="text-[13px] font-bold text-gray-800 dark:text-gray-200 mb-3">Select a brush type</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                onClick={() => setTool('erase')} 
+                className={`flex flex-col items-center justify-center py-4 rounded-[1.25rem] border-2 transition-all ${tool === 'erase' ? 'border-gray-900 bg-gray-50 dark:border-gray-300 dark:bg-gray-800' : 'border-gray-200 dark:border-gray-800 hover:border-gray-300'}`}
+              >
+                <div className="relative w-12 h-12 mb-2 bg-gray-100 dark:bg-gray-800 rounded-[0.8rem] flex items-center justify-center">
+                  <Eraser className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+                  <div className="absolute -bottom-1.5 -right-1.5 bg-white dark:bg-gray-900 rounded-full p-[3px] border border-gray-300 dark:border-gray-600 shadow-sm">
+                    <Minus className="w-3 h-3 text-gray-800 dark:text-gray-200" strokeWidth={3} />
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-gray-600 dark:text-gray-400">Erase</span>
+              </button>
+              
+              <button 
+                onClick={() => setTool('restore')} 
+                className={`flex flex-col items-center justify-center py-4 rounded-[1.25rem] border-2 transition-all ${tool === 'restore' ? 'border-gray-900 bg-gray-50 dark:border-gray-300 dark:bg-gray-800' : 'border-gray-200 dark:border-gray-800 hover:border-gray-300'}`}
+              >
+                <div className="relative w-12 h-12 mb-2 bg-gray-100 dark:bg-gray-800 rounded-[0.8rem] flex items-center justify-center">
+                  <Brush className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+                  <div className="absolute -bottom-1.5 -right-1.5 bg-[#4a85eb] rounded-full p-[3px] shadow-sm text-white border-2 border-white dark:border-gray-900">
+                    <Plus className="w-3 h-3" strokeWidth={3} />
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-gray-600 dark:text-gray-400">Restore</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Brush Size */}
+          <div>
+            <h3 className="text-[13px] font-bold text-gray-800 dark:text-gray-200 mb-3">Brush size</h3>
+            <div className="flex items-center gap-4">
+              <div className="w-3 h-3 border-[2.5px] border-gray-700 dark:border-gray-300 rounded-full shrink-0" />
+              <input 
+                type="range" 
+                min="1" 
+                max="150" 
+                value={brushSize} 
+                onChange={(e)=>setBrushSize(Number(e.target.value))} 
+                className="w-full h-1 bg-gray-200 dark:bg-gray-800 rounded-lg appearance-none cursor-pointer accent-gray-900 dark:accent-gray-100" 
+              />
+            </div>
+          </div>
+
+          {/* Brush Hardness */}
+          <div>
+            <h3 className="text-[13px] font-bold text-gray-800 dark:text-gray-200 mb-3">Brush hardness</h3>
+            <div className="flex items-center gap-4">
+              <input 
+                type="range" 
+                min="0" 
+                max="100" 
+                value={brushHardness} 
+                onChange={(e)=>setBrushHardness(Number(e.target.value))} 
+                className="w-full h-1 bg-gray-200 dark:bg-gray-800 rounded-lg appearance-none cursor-pointer accent-gray-900 dark:accent-gray-100" 
+              />
+              <div className="w-4 h-4 border-[3.5px] border-gray-700 dark:border-gray-300 rounded-full shrink-0" />
+            </div>
+          </div>
+
+          {/* Show Original Background Toggle */}
+          <div className="flex items-center gap-3 mt-4">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={showOriginalBg} 
+                onChange={(e) => setShowOriginalBg(e.target.checked)} 
+              />
+              <div className="w-9 h-[22px] bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#4a85eb]"></div>
+            </label>
+            <span className="text-[13px] font-semibold text-gray-600 dark:text-gray-400">Show original background</span>
+          </div>
+
+        </div>
+
+        {/* Save Button */}
+        <div className="p-6">
+          <button 
+            onClick={handleSave} 
+            className="w-full bg-[#4a85eb] hover:bg-[#3d70cc] text-white font-bold py-3 rounded-full shadow-md transition-all active:scale-95"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+
     </div>
   );
 }
