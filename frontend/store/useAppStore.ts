@@ -91,8 +91,8 @@ interface AppState {
   setCurrentView: (view: 'upload' | 'processing' | 'workspace') => void;
   
   // App Mode
-  appMode: 'layer-extractor' | 'bg-remover' | 'image-upscaler' | 'logo-bw' | 'photo-resizer';
-  setAppMode: (mode: 'layer-extractor' | 'bg-remover' | 'image-upscaler' | 'logo-bw' | 'photo-resizer') => void;
+  appMode: 'layer-extractor' | 'bg-remover' | 'image-upscaler' | 'logo-bw' | 'photo-resizer' | 'text-extractor';
+  setAppMode: (mode: 'layer-extractor' | 'bg-remover' | 'image-upscaler' | 'logo-bw' | 'photo-resizer' | 'text-extractor') => void;
 }
 
 export const useAppStore = create<AppState>()(

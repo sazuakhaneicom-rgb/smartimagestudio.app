@@ -89,7 +89,7 @@ export default function SettingsModal() {
               <p className="opacity-90 leading-relaxed text-xs">
                 মডেলের রেট লিমিট এড়াতে আপনি ৪টি পর্যন্ত API কী যোগ করতে পারেন। সিস্টেম স্বয়ংক্রিয়ভাবে একটি কী লিমিট শেষ হলে অন্যটিতে সুইচ করবে। <br/>
                 <a 
-                  href="https://aistudio.google.com/apikey" 
+                  href="https://aistudio.google.com/app/apikey" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="font-semibold underline hover:text-blue-600 dark:hover:text-blue-400 mt-1 inline-block"

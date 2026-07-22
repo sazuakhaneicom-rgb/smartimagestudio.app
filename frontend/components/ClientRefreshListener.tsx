@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { sendClientHeartbeat, listenToRemoteRefresh, checkIfSessionBlocked } from '@/lib/adminAnalytics';
-import { RefreshCw, Sparkles } from 'lucide-react';
+import { sendClientHeartbeat, listenToRemoteRefresh, checkIsSessionBlocked } from '@/lib/adminAnalytics';
+import { RefreshCw, Sparkles, ShieldAlert } from 'lucide-react';
 
 export default function ClientRefreshListener() {
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
 
   useEffect(() => {
@@ -14,19 +15,26 @@ export default function ClientRefreshListener() {
       sendClientHeartbeat();
     }, 30000);
 
-    // 2. Check if current session is blocked by Admin
-    const checkBlockedStatus = async () => {
-      const blocked = await checkIfSessionBlocked();
-      setIsBlocked(blocked);
+    // 1.5 Check block status periodically
+    const checkBlock = async () => {
+      const blocked = await checkIsSessionBlocked();
+      if (blocked && !isBlocked) {
+        setIsBlocked(true);
+      } else if (!blocked && isBlocked) {
+        setIsBlocked(false);
+      }
     };
+    checkBlock();
+    const blockInterval = setInterval(checkBlock, 10000);
 
-    checkBlockedStatus();
-    const blockInterval = setInterval(checkBlockedStatus, 3000);
-
-    // 3. Listen for Admin Force Refresh Signal (Silent Reload)
+    // 2. Listen for Admin Force Refresh Signal (Silent Reload)
     const unsubscribe = listenToRemoteRefresh(() => {
-      console.log('🔄 Admin triggered Remote Refresh. Performing silent reload...');
       if (typeof window !== 'undefined') {
+        if (window.location.pathname.includes('/admin')) {
+          console.log('🛡️ Admin page shielded from remote reload.');
+          return;
+        }
+        console.log('🔄 Admin triggered Remote Refresh. Performing silent reload...');
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistrations().then(registrations => {
             registrations.forEach(r => r.unregister());
@@ -36,36 +44,22 @@ export default function ClientRefreshListener() {
       }
     });
 
-    // 4. Listen to local custom event for admin panel local trigger
-    const handleLocalTrigger = () => {
-      if (typeof window !== 'undefined') window.location.reload();
-    };
-    window.addEventListener('trigger_refresh_animation', handleLocalTrigger);
-
     return () => {
       clearInterval(heartbeatInterval);
       clearInterval(blockInterval);
       unsubscribe();
-      window.removeEventListener('trigger_refresh_animation', handleLocalTrigger);
     };
-  }, []);
+  }, [isBlocked]);
 
   if (isBlocked) {
     return (
-      <div className="fixed inset-0 z-[999999] bg-[#0A0512] text-white flex items-center justify-center p-6 font-sans animate-in fade-in duration-500">
-        <div className="max-w-md w-full bg-[#180E29] border border-red-500/40 p-8 rounded-3xl text-center space-y-6 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="w-20 h-20 bg-red-500/20 text-red-400 rounded-3xl mx-auto flex items-center justify-center border border-red-500/30 shadow-lg shadow-red-500/20">
-            <span className="text-4xl">🚫</span>
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-black tracking-tight text-white">এক্সেস স্থগিত করা হয়েছে</h2>
-            <p className="text-xs font-bold text-red-400 uppercase tracking-widest">Access Denied by Admin</p>
-          </div>
-          <p className="text-xs text-gray-300 leading-relaxed font-medium bg-red-500/10 border border-red-500/20 p-4 rounded-2xl">
-            এডমিন কর্তৃক আপনার ডিভাইস বা সেশনের এক্সেস সাময়িকভাবে বন্ধ করা হয়েছে। কোনো প্রশ্ন থাকলে এডমিনের সাথে যোগাযোগ করুন।
-          </p>
-        </div>
+      <div className="fixed inset-0 z-[9999] bg-black/90 flex flex-col items-center justify-center p-6 backdrop-blur-xl">
+        <ShieldAlert className="w-24 h-24 text-red-500 mb-6 animate-pulse" />
+        <h1 className="text-4xl font-black text-white text-center mb-4 tracking-tight">Access Suspended</h1>
+        <p className="text-lg text-gray-400 text-center max-w-md bg-white/5 p-6 rounded-2xl border border-white/10">
+          Your access to Smart Image Studio has been temporarily suspended by the administrator. 
+          Please contact support if you believe this is a mistake.
+        </p>
       </div>
     );
   }

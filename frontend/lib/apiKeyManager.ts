@@ -120,11 +120,25 @@ export async function callWithRotation(
       }
 
       if (response.status === 429) {
-        // Transient per-minute rate limit — do NOT exhaust the key, just inform user
         const bodyText = await response.text().catch(() => '');
-        throw new RateLimitError(
-          'সব Gemini মডেলে সাময়িক রেট লিমিট হয়েছে। ১ মিনিট পর আবার চেষ্টা করুন।'
-        );
+        console.error('🚨 Gemini 429 Rate Limit Error:', bodyText); // Debugging info
+        const isDaily = bodyText.toLowerCase().includes('per day') || bodyText.toLowerCase().includes('exhausted') || bodyText.toLowerCase().includes('quota');
+        
+        if (isDaily) {
+          currentStore.markKeyExhausted(activeKeyEntry.id);
+          currentStore.addNotification({ type: 'warning', message: `🔑 API Key ${activeKeyEntry.maskedValue} এর লিমিট শেষ। পরের Key-তে যাচ্ছে...`, autoDismiss: true });
+        } else {
+          currentStore.addNotification({ type: 'info', message: `🔑 API Key ${activeKeyEntry.maskedValue} রেট লিমিটে পৌঁছেছে। পরের Key-তে যাচ্ছে...`, autoDismiss: true });
+        }
+
+        const hasNext = rotateToNextKey();
+        if (!hasNext) {
+          throw new RateLimitError(
+            'আপনার API Key-এর ব্যবহারের সীমা (Quota) শেষ হয়ে গেছে। দয়া করে Settings থেকে নতুন একটি Gemini API Key যুক্ত করুন।'
+          );
+        }
+        attempts++;
+        continue;
       }
 
       return response;

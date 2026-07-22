@@ -3,15 +3,7 @@
 // Real-time Analytics & Client Remote Force-Refresh Service
 // Project: smart-image-73059
 
-export type Category = 'bg_remover' | 'image_hd' | 'logo_bw' | 'photo_resizer' | 'layer_extractor';
-
-export interface UserSession {
-  sessionId: string;
-  lastSeen: number;
-  userAgent: string;
-  deviceType: 'mobile' | 'desktop' | 'tablet';
-  isBlocked?: boolean;
-}
+export type Category = 'bg_remover' | 'image_hd' | 'logo_bw' | 'photo_resizer' | 'layer_extractor' | 'text_extractor';
 
 export interface AnalyticsSummary {
   activeUsers: number;
@@ -22,8 +14,16 @@ export interface AnalyticsSummary {
     logo_bw: number;
     photo_resizer: number;
     layer_extractor: number;
+    text_extractor: number;
   };
   lastRemoteRefresh: number;
+}
+
+export interface UserSession {
+  sessionId: string;
+  lastSeen: number;
+  userAgent: string;
+  deviceType: string;
 }
 
 const FIREBASE_DB_URL = "https://smart-image-73059-default-rtdb.firebaseio.com";
@@ -46,7 +46,8 @@ const defaultBreakdown = {
   image_hd: 0,
   logo_bw: 0,
   photo_resizer: 0,
-  layer_extractor: 0
+  layer_extractor: 0,
+  text_extractor: 0
 };
 
 // Local storage fallback helper
@@ -113,23 +114,35 @@ export const sendClientHeartbeat = async () => {
   if (typeof window === 'undefined') return;
 
   const now = Date.now();
-  const ua = navigator.userAgent || '';
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-  const isTablet = /iPad|Android(?!.*Mobile)/i.test(ua);
-  const deviceType = isTablet ? 'tablet' : isMobile ? 'mobile' : 'desktop';
+  let deviceType = 'Desktop';
+  if (/Mobi|Android/i.test(navigator.userAgent)) deviceType = 'Mobile';
+  else if (/Tablet|iPad/i.test(navigator.userAgent)) deviceType = 'Tablet';
 
   try {
-    await fetch(`${FIREBASE_DB_URL}/sessions/${CLIENT_SESSION_ID}.json`, {
+    const res = await fetch(`${FIREBASE_DB_URL}/sessions/${CLIENT_SESSION_ID}.json`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sessionId: CLIENT_SESSION_ID,
         lastSeen: now,
-        userAgent: ua,
+        userAgent: navigator.userAgent,
         deviceType
       })
     });
   } catch (e) {}
+};
+
+// Listen to blocked status
+export const checkIsSessionBlocked = async (): Promise<boolean> => {
+  if (typeof window === 'undefined') return false;
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/blockedSessions/${CLIENT_SESSION_ID}.json`);
+    if (res.ok) {
+      const data = await res.json();
+      return data?.blocked === true;
+    }
+  } catch (e) {}
+  return false;
 };
 
 // 3. Listen to Remote Refresh Signal
@@ -229,25 +242,25 @@ export const getAnalyticsSummary = async (): Promise<AnalyticsSummary> => {
     const sessData = await sessRes.json() || {};
     const refreshData = await refreshRes.json() || 0;
 
-    // Count active sessions in last 5 minutes
+    // Count active sessions in last 2 minutes
     let activeCount = 0;
     if (sessData && typeof sessData === 'object') {
       Object.values(sessData).forEach((sess: any) => {
-        if (sess?.lastSeen && (now - sess.lastSeen) < 5 * 60 * 1000) {
+        if (sess?.lastSeen && (now - sess.lastSeen) < 2 * 60 * 1000) {
           activeCount++;
         }
       });
     }
 
+    const total = genData.total || 0;
     const breakdown = {
-      bg_remover: Number(genData.bg_remover || 0),
-      image_hd: Number(genData.image_hd || 0),
-      logo_bw: Number(genData.logo_bw || 0),
-      photo_resizer: Number(genData.photo_resizer || 0),
-      layer_extractor: Number(genData.layer_extractor || 0)
+      bg_remover: genData.bg_remover || 0,
+      image_hd: genData.image_hd || 0,
+      logo_bw: genData.logo_bw || 0,
+      photo_resizer: genData.photo_resizer || 0,
+      layer_extractor: genData.layer_extractor || 0,
+      text_extractor: genData.text_extractor || 0
     };
-    const calculatedTotal = breakdown.bg_remover + breakdown.image_hd + breakdown.logo_bw + breakdown.photo_resizer + breakdown.layer_extractor;
-    const total = Number(genData.total || calculatedTotal);
 
     return {
       activeUsers: Math.max(1, activeCount),
@@ -266,80 +279,44 @@ export const getAnalyticsSummary = async (): Promise<AnalyticsSummary> => {
   }
 };
 
-// 5b. Fetch all active sessions with blocked status for Admin Modal
 export const getActiveSessions = async (): Promise<UserSession[]> => {
   try {
-    const [sessRes, blockRes] = await Promise.all([
-      fetch(`${FIREBASE_DB_URL}/sessions.json?t=${Date.now()}`),
-      fetch(`${FIREBASE_DB_URL}/blockedSessions.json?t=${Date.now()}`)
-    ]);
+    const res = await fetch(`${FIREBASE_DB_URL}/sessions.json`);
+    if (!res.ok) return [];
+    const sessData = await res.json();
+    if (!sessData || typeof sessData !== 'object') return [];
 
-    const sessData = (await sessRes.json()) || {};
-    const blockData = (await blockRes.json()) || {};
     const now = Date.now();
-
-    const sessions: UserSession[] = [];
-
-    if (sessData && typeof sessData === 'object') {
-      Object.entries(sessData).forEach(([id, sess]: [string, any]) => {
-        if (sess && typeof sess === 'object' && sess.lastSeen) {
-          if (now - sess.lastSeen < 10 * 60 * 1000) {
-            const isBlocked = !!(blockData && blockData[id]);
-            sessions.push({
-              sessionId: id,
-              lastSeen: sess.lastSeen,
-              userAgent: sess.userAgent || 'Unknown Device',
-              deviceType: sess.deviceType || 'desktop',
-              isBlocked
-            });
-          }
-        }
-      });
-    }
-
-    return sessions.sort((a, b) => b.lastSeen - a.lastSeen);
+    const active: UserSession[] = [];
+    Object.values(sessData).forEach((sess: any) => {
+      // 5 minutes window for active users display in admin panel
+      if (sess?.lastSeen && (now - sess.lastSeen) < 5 * 60 * 1000) {
+        active.push({
+          sessionId: sess.sessionId || 'unknown',
+          lastSeen: sess.lastSeen,
+          userAgent: sess.userAgent || 'Unknown Browser',
+          deviceType: sess.deviceType || 'Desktop'
+        });
+      }
+    });
+    return active.sort((a, b) => b.lastSeen - a.lastSeen);
   } catch (e) {
     return [];
   }
 };
 
-// 5c. Block a session
-export const blockSession = async (sessionId: string): Promise<boolean> => {
+export const blockSession = async (sessionId: string, unblock = false) => {
   try {
-    const res = await fetch(`${FIREBASE_DB_URL}/blockedSessions/${sessionId}.json`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ blockedAt: Date.now() })
-    });
-    return res.ok;
-  } catch (e) {
-    return false;
-  }
-};
-
-// 5d. Unblock a session
-export const unblockSession = async (sessionId: string): Promise<boolean> => {
-  try {
-    const res = await fetch(`${FIREBASE_DB_URL}/blockedSessions/${sessionId}.json`, {
-      method: 'DELETE'
-    });
-    return res.ok;
-  } catch (e) {
-    return false;
-  }
-};
-
-// 5e. Check if current client session is blocked
-export const checkIfSessionBlocked = async (): Promise<boolean> => {
-  if (typeof window === 'undefined') return false;
-  try {
-    const res = await fetch(`${FIREBASE_DB_URL}/blockedSessions/${CLIENT_SESSION_ID}.json?t=${Date.now()}`);
-    if (res.ok) {
-      const data = await res.json();
-      return data !== null && data !== undefined;
+    if (unblock) {
+      await fetch(`${FIREBASE_DB_URL}/blockedSessions/${sessionId}.json`, { method: 'DELETE' });
+    } else {
+      await fetch(`${FIREBASE_DB_URL}/blockedSessions/${sessionId}.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blocked: true, blockedAt: Date.now() })
+      });
     }
   } catch (e) {}
-  return false;
 };
 
 // 6. Reset Analytics Data (Admin Action)
@@ -368,6 +345,7 @@ export interface FeatureFlags {
   logo_bw: boolean;
   photo_resizer: boolean;
   layer_extractor: boolean;
+  text_extractor: boolean;
 }
 
 export const defaultFeatureFlags: FeatureFlags = {
@@ -375,7 +353,8 @@ export const defaultFeatureFlags: FeatureFlags = {
   image_hd: true,
   logo_bw: true,
   photo_resizer: true,
-  layer_extractor: true
+  layer_extractor: true,
+  text_extractor: true
 };
 
 const FEATURE_FLAGS_KEY = "smart_image_feature_flags";

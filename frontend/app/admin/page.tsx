@@ -15,7 +15,6 @@ import {
   defaultFeatureFlags,
   getActiveSessions,
   blockSession,
-  unblockSession,
   UserSession
 } from '@/lib/adminAnalytics';
 import { 
@@ -38,11 +37,10 @@ import {
   EyeOff,
   Save,
   CheckCircle2,
+  X,
   Smartphone,
   Monitor,
-  Tablet,
-  Ban,
-  X
+  Ban
 } from 'lucide-react';
 
 const FEATURE_NAMES: Record<keyof FeatureFlags, { name: string; icon: React.ReactNode; color: string }> = {
@@ -50,7 +48,8 @@ const FEATURE_NAMES: Record<keyof FeatureFlags, { name: string; icon: React.Reac
   image_hd: { name: 'Image to HD (Upscaler)', icon: <Sparkles className="w-5 h-5" />, color: 'text-indigo-400' },
   logo_bw: { name: 'লোগো B&W (Vectorizer)', icon: <ScanLine className="w-5 h-5" />, color: 'text-cyan-400' },
   photo_resizer: { name: 'ফটো রিসাইজার (Photo Resizer)', icon: <Crop className="w-5 h-5" />, color: 'text-emerald-400' },
-  layer_extractor: { name: 'লেয়ার এক্সট্রাক্টর (Layer Extractor)', icon: <Shapes className="w-5 h-5" />, color: 'text-purple-400' }
+  layer_extractor: { name: 'লেয়ার এক্সট্রাক্টর (Layer Extractor)', icon: <Shapes className="w-5 h-5" />, color: 'text-purple-400' },
+  text_extractor: { name: 'ইমেজ স্ক্যানার (Translator)', icon: <ScanLine className="w-5 h-5" />, color: 'text-blue-400' }
 };
 
 export default function AdminPage() {
@@ -71,7 +70,8 @@ export default function AdminPage() {
       image_hd: 0,
       logo_bw: 0,
       photo_resizer: 0,
-      layer_extractor: 0
+      layer_extractor: 0,
+      text_extractor: 0
     },
     lastRemoteRefresh: 0
   });
@@ -81,15 +81,17 @@ export default function AdminPage() {
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [showRefreshAnimation, setShowRefreshAnimation] = useState(false);
+
+  // Active Users Modal State
+  const [isUsersModalOpen, setIsUsersModalOpen] = useState(false);
+  const [activeUsersList, setActiveUsersList] = useState<UserSession[]>([]);
+  const [blockedSessionIds, setBlockedSessionIds] = useState<Set<string>>(new Set());
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   // Track unsaved changes to prevent the live listener from overwriting the UI before save
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const hasUnsavedChangesRef = React.useRef(false);
-
-  // Active Users Modal State
-  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [activeSessions, setActiveSessions] = useState<UserSession[]>([]);
-  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
   // Check saved admin session
   useEffect(() => {
@@ -180,8 +182,10 @@ export default function AdminPage() {
     setIsLoadingMetrics(false);
 
     if (success) {
+      setShowRefreshAnimation(true);
+      setTimeout(() => setShowRefreshAnimation(false), 3000);
+      
       setActionSuccess('🌐 সকল ভিজিটরের ব্রাউজারে হার্ড রিফ্রেশ সিগন্যাল পাঠানো হয়েছে!');
-      window.dispatchEvent(new Event('trigger_refresh_animation'));
       const updated = await getAnalyticsSummary();
       setMetrics(updated);
       setTimeout(() => setActionSuccess(null), 5000);
@@ -200,23 +204,43 @@ export default function AdminPage() {
     }
   };
 
-  const handleOpenUserModal = async () => {
-    setIsUserModalOpen(true);
-    setIsLoadingSessions(true);
-    const data = await getActiveSessions();
-    setActiveSessions(data);
-    setIsLoadingSessions(false);
+  const openUsersModal = async () => {
+    setIsUsersModalOpen(true);
+    setIsLoadingUsers(true);
+    const sessions = await getActiveSessions();
+    setActiveUsersList(sessions);
+    
+    // Fetch block list manually here since it's only needed for the modal
+    try {
+      const res = await fetch(`https://smart-image-73059-default-rtdb.firebaseio.com/blockedSessions.json`);
+      if (res.ok) {
+        const data = await res.json();
+        const blockedSet = new Set<string>();
+        if (data) {
+          Object.entries(data).forEach(([key, val]: any) => {
+            if (val?.blocked) blockedSet.add(key);
+          });
+        }
+        setBlockedSessionIds(blockedSet);
+      }
+    } catch(e) {}
+    
+    setIsLoadingUsers(false);
   };
 
-  const handleToggleBlock = async (sessionId: string, isCurrentlyBlocked?: boolean) => {
-    if (isCurrentlyBlocked) {
-      await unblockSession(sessionId);
-    } else {
-      await blockSession(sessionId);
-    }
-    const updated = await getActiveSessions();
-    setActiveSessions(updated);
+  const handleToggleBlock = async (sessionId: string) => {
+    const isCurrentlyBlocked = blockedSessionIds.has(sessionId);
+    await blockSession(sessionId, isCurrentlyBlocked);
+    
+    setBlockedSessionIds(prev => {
+      const newSet = new Set(prev);
+      if (isCurrentlyBlocked) newSet.delete(sessionId);
+      else newSet.add(sessionId);
+      return newSet;
+    });
   };
+
+  // --- LOGIN SCREEN ---
   if (!isAuthenticated) {
     return (
       <div className="h-screen w-full bg-[#0F0A1A] text-white flex items-center justify-center p-4 font-sans relative overflow-hidden">
@@ -404,12 +428,12 @@ export default function AdminPage() {
           
           {/* Card 1: Active Users */}
           <div 
-            onClick={handleOpenUserModal}
-            className="bg-gradient-to-br from-[#1A1128] to-[#120B1E] border border-purple-500/20 hover:border-emerald-500/50 p-6 rounded-3xl shadow-xl flex items-center justify-between relative overflow-hidden group cursor-pointer transition-all hover:scale-[1.01]"
+            onClick={openUsersModal}
+            className="cursor-pointer bg-gradient-to-br from-[#1A1128] to-[#120B1E] border border-purple-500/20 p-6 rounded-3xl shadow-xl flex items-center justify-between relative overflow-hidden group hover:border-emerald-500/50 transition-colors"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
             <div>
-              <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider block mb-1">সক্রিয় ইউজার (Online Right Now)</span>
+              <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider block mb-1">সক্রিয় ইউজার (Click to View)</span>
               <div className="text-5xl font-black text-white font-mono flex items-baseline gap-2">
                 {metrics.activeUsers}
                 <span className="flex h-3 w-3 relative">
@@ -417,11 +441,9 @@ export default function AdminPage() {
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                 </span>
               </div>
-              <span className="text-[11px] text-emerald-400 font-semibold mt-2 flex items-center gap-1">
-                🟢 ভিউ ইউজারলিস্ট & ব্লক ম্যানেজার →
-              </span>
+              <span className="text-[11px] text-emerald-400 font-semibold mt-2 block">🟢 রিয়েল-টাইম ইউজার একটিভিটি সেশন</span>
             </div>
-            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400 group-hover:scale-110 transition-transform">
               <Users className="w-8 h-8" />
             </div>
           </div>
@@ -479,7 +501,7 @@ export default function AdminPage() {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             
             {/* Bg Remover */}
             <div className="bg-[#0F0A1A] p-5 rounded-2xl border border-pink-500/20 flex flex-col items-center text-center">
@@ -526,6 +548,15 @@ export default function AdminPage() {
               <span className="text-3xl font-black text-white font-mono">{metrics.breakdown.layer_extractor}</span>
             </div>
 
+            {/* Text Extractor */}
+            <div className="bg-[#0F0A1A] p-5 rounded-2xl border border-blue-500/20 flex flex-col items-center text-center">
+              <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400 mb-3">
+                <ScanLine className="w-6 h-6" />
+              </div>
+              <span className="text-xs font-bold text-gray-400 mb-1">ইমেজ স্ক্যানার</span>
+              <span className="text-3xl font-black text-white font-mono">{metrics.breakdown.text_extractor}</span>
+            </div>
+
           </div>
         </div>
 
@@ -567,116 +598,69 @@ export default function AdminPage() {
 
       </div>
 
-      {/* --- LIVE ACTIVE USERS & BLOCK MANAGER MODAL --- */}
-      {isUserModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 font-sans animate-in fade-in duration-300">
-          <div className="bg-[#140D21] border border-purple-500/30 w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300">
-            
-            {/* Modal Header */}
-            <div className="p-6 border-b border-purple-500/20 flex justify-between items-center bg-[#1B122B]">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400">
-                  <Users className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-white flex items-center gap-2">
-                    সক্রিয় ইউজার ও ডিভাইস ম্যানেজার
-                    <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/30">LIVE</span>
-                  </h3>
-                  <p className="text-xs text-gray-400">অনলাইনে থাকা ডিভাইসগুলোর তালিকা ও এক্সেস কন্ট্রোল</p>
-                </div>
+      {/* ACTIVE USERS MODAL */}
+      {isUsersModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#1A1128] border border-purple-500/30 rounded-3xl w-full max-w-3xl max-h-[80vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-purple-500/20 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-black text-white flex items-center gap-2">
+                  <Users className="w-5 h-5 text-emerald-400" />
+                  রিয়েল-টাইম একটিভ ইউজার্স
+                </h2>
+                <p className="text-xs text-gray-400 font-medium">গত ৫ মিনিটে যারা ওয়েবসাইটে প্রবেশ করেছেন</p>
               </div>
-
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={handleOpenUserModal} 
-                  className="p-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-all"
-                  title="রিফ্রেশ করুন"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isLoadingSessions ? 'animate-spin' : ''}`} />
-                </button>
-                <button 
-                  onClick={() => setIsUserModalOpen(false)} 
-                  className="p-2.5 bg-gray-800 hover:bg-red-500/20 text-gray-400 hover:text-red-300 rounded-xl transition-all"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              <button 
+                onClick={() => setIsUsersModalOpen(false)}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
-
-            {/* Modal Content */}
-            <div className="p-6 overflow-y-auto flex-1 space-y-4">
-              {isLoadingSessions ? (
-                <div className="py-12 flex flex-col items-center justify-center text-gray-400 gap-3">
-                  <RefreshCw className="w-8 h-8 animate-spin text-purple-500" />
-                  <span className="text-sm font-bold">ইউজার সেশন লোড হচ্ছে...</span>
+            
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+              {isLoadingUsers ? (
+                <div className="flex justify-center items-center h-40">
+                  <RefreshCw className="w-8 h-8 text-purple-500 animate-spin" />
                 </div>
-              ) : activeSessions.length === 0 ? (
-                <div className="py-12 text-center text-gray-400 font-medium text-sm">
-                  কোনো সক্রিয় ইউজার সেশন পাওয়া যায়নি।
+              ) : activeUsersList.length === 0 ? (
+                <div className="text-center text-gray-500 py-10 font-bold">
+                  বর্তমানে কোনো ইউজার একটিভ নেই।
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {activeSessions.map((sess) => {
-                    const secsAgo = Math.round((Date.now() - sess.lastSeen) / 1000);
-                    const timeAgoText = secsAgo < 10 ? 'এখনই (Right Now)' : `${secsAgo} সেকেন্ড আগে`;
-
+                  {activeUsersList.map((user) => {
+                    const isBlocked = blockedSessionIds.has(user.sessionId);
+                    const timeAgo = Math.floor((Date.now() - user.lastSeen) / 1000);
+                    
                     return (
-                      <div 
-                        key={sess.sessionId}
-                        className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all ${
-                          sess.isBlocked 
-                            ? 'bg-red-950/20 border-red-500/40' 
-                            : 'bg-[#1B122B]/80 border-purple-500/20 hover:border-purple-500/40'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`p-3 rounded-xl border ${
-                            sess.isBlocked ? 'bg-red-500/20 border-red-500/30 text-red-400' : 'bg-purple-500/10 border-purple-500/20 text-purple-400'
-                          }`}>
-                            {sess.deviceType === 'mobile' ? (
-                              <Smartphone className="w-5 h-5" />
-                            ) : sess.deviceType === 'tablet' ? (
-                              <Tablet className="w-5 h-5" />
-                            ) : (
-                              <Monitor className="w-5 h-5" />
-                            )}
+                      <div key={user.sessionId} className={`p-4 rounded-xl border flex items-center justify-between ${isBlocked ? 'bg-red-900/10 border-red-500/30' : 'bg-black/20 border-white/10'}`}>
+                        <div className="flex items-center gap-4">
+                          <div className={`p-3 rounded-lg ${user.deviceType === 'Mobile' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'}`}>
+                            {user.deviceType === 'Mobile' ? <Smartphone className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
                           </div>
-
                           <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs font-bold text-white">{sess.sessionId}</span>
-                              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                                sess.deviceType === 'mobile' ? 'bg-pink-500/20 text-pink-300' : 'bg-blue-500/20 text-blue-300'
-                              }`}>
-                                {sess.deviceType.toUpperCase()}
-                              </span>
-                              {sess.isBlocked && (
-                                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
-                                  🔴 ব্লকেড
-                                </span>
-                              )}
+                            <div className="font-mono text-xs font-bold text-gray-300 mb-1">
+                              Session: {user.sessionId.substring(0, 12)}...
                             </div>
-                            <p className="text-[11px] text-gray-400 truncate max-w-xs sm:max-w-md mt-0.5" title={sess.userAgent}>
-                              {sess.userAgent}
-                            </p>
-                            <span className="text-[10px] text-emerald-400 font-medium block mt-1">
-                              ⏱️ শেষ সক্রিয়তা: {timeAgoText}
-                            </span>
+                            <div className="text-[11px] text-gray-500 truncate max-w-[200px] sm:max-w-xs">
+                              {user.userAgent}
+                            </div>
+                            <div className="text-[10px] text-emerald-400 font-bold mt-1">
+                              {timeAgo < 60 ? `${timeAgo} sec ago` : `${Math.floor(timeAgo / 60)} min ago`}
+                            </div>
                           </div>
                         </div>
-
-                        {/* Action Button */}
                         <button
-                          onClick={() => handleToggleBlock(sess.sessionId, sess.isBlocked)}
-                          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
-                            sess.isBlocked
-                              ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40'
-                              : 'bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/40'
+                          onClick={() => handleToggleBlock(user.sessionId)}
+                          className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
+                            isBlocked 
+                              ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20' 
+                              : 'bg-gray-800 hover:bg-red-500/20 text-gray-300 hover:text-red-400 border border-gray-700'
                           }`}
                         >
-                          <Ban className="w-3.5 h-3.5" />
-                          {sess.isBlocked ? '🟢 আনব্লক করুন (Unblock)' : '🚫 ব্লক করুন (Block)'}
+                          <Ban className="w-4 h-4" />
+                          {isBlocked ? 'Unblock' : 'Block Access'}
                         </button>
                       </div>
                     );
@@ -684,12 +668,19 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
 
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-purple-500/20 bg-[#1B122B] text-center text-xs text-gray-400">
-              💡 কোনো ইউজারকে ব্লক করলে তার মোবাইল বা পিসি সাথে সাথে ব্লক স্ক্রিন দেখিয়ে আটকে যাবে।
+      {/* REFRESH SUCCESS ANIMATION */}
+      {showRefreshAnimation && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="flex flex-col items-center bg-[#1A1128] p-10 rounded-[3rem] border border-pink-500/30 shadow-[0_0_100px_rgba(236,72,153,0.3)] animate-in zoom-in-50 duration-500">
+            <div className="w-24 h-24 bg-gradient-to-tr from-pink-500 to-purple-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(236,72,153,0.6)] animate-bounce">
+              <RefreshCw className="w-12 h-12 text-white animate-spin" />
             </div>
-
+            <h2 className="text-3xl font-black text-white text-center tracking-tight mb-2">Cache Cleared!</h2>
+            <p className="text-pink-300 font-bold text-center">সকল ইউজারের ব্রাউজার রিলোড হচ্ছে...</p>
           </div>
         </div>
       )}

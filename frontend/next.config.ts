@@ -10,7 +10,7 @@ const cspHeader = `
     base-uri 'self';
     form-action 'self';
     frame-ancestors 'none';
-    connect-src 'self' http://127.0.0.1:* http://localhost:* https://*.cloudfunctions.net https://*.firebaseio.com wss://*.firebaseio.com https://staticimgly.com https://unpkg.com https://cdn.jsdelivr.net blob: https://api.deepai.org;
+    connect-src 'self' http://127.0.0.1:* http://localhost:* https://*.cloudfunctions.net https://*.firebaseio.com wss://*.firebaseio.com https://staticimgly.com https://unpkg.com https://cdn.jsdelivr.net blob: https://api.deepai.org https://generativelanguage.googleapis.com https://tessdata.projectnaptha.com;
     worker-src 'self' blob:;
 `;
 

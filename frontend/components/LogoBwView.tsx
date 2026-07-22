@@ -9,9 +9,16 @@ import { trackGeneration } from '@/lib/adminAnalytics';
 // -------------------------------------------------------
 // Gemini Vision: detect corners or deskew angle
 // -------------------------------------------------------
-async function analyzeImageWithGemini(base64: string, apiKey: string): Promise<Response> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+const FALLBACK_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite-preview-02-05',
+  'gemini-1.5-pro',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b'
+];
 
+async function analyzeImageWithGemini(base64: string, apiKey: string): Promise<Response> {
   const body = {
     contents: [
       {
@@ -38,11 +45,44 @@ Do not include markdown blocks, just the raw JSON.`,
     generationConfig: { temperature: 0.1, maxOutputTokens: 100 },
   };
 
-  return fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  let lastResponse: Response | null = null;
+  let rateLimitResponse: Response | null = null;
+
+  for (const model of FALLBACK_MODELS) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      lastResponse = response;
+
+      if (response.ok) {
+        return response; // Success!
+      }
+      
+      if (response.status === 429) {
+        rateLimitResponse = response;
+        continue;
+      }
+      
+      // If the model is not found, disabled, or rate-limited, try the next model
+      if (response.status === 404 || response.status === 503) {
+        continue;
+      }
+
+      // For 400, 401, etc., return immediately to let apiKeyManager handle it
+      return response;
+    } catch (e) {
+      console.warn(`Fetch failed for model ${model}:`, e);
+    }
+  }
+
+  if (rateLimitResponse) return rateLimitResponse;
+  if (lastResponse) return lastResponse;
+  throw new Error('Failed to connect to Gemini API');
 }
 
 // -------------------------------------------------------

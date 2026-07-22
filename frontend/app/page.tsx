@@ -10,8 +10,9 @@ import BgRemoverView from '@/components/BgRemoverView';
 import ImageToHdView from '@/components/ImageToHdView';
 import LogoBwView from '@/components/LogoBwView';
 import PhotoResizerView from '@/components/PhotoResizerView';
+import ImageTranslatorView from '@/components/ImageTranslatorView';
 import { listenToFeatureFlags, FeatureFlags, defaultFeatureFlags } from '@/lib/adminAnalytics';
-import { X, Loader2, CheckCircle, AlertCircle, Info, Scissors, Sparkles, ScanLine, Shapes, Crop } from 'lucide-react';
+import { X, Loader2, CheckCircle, AlertCircle, Info, Scissors, Sparkles, ScanLine, Shapes, Crop, Languages } from 'lucide-react';
 
 import SettingsModal from '@/components/SettingsModal';
 
@@ -158,7 +159,8 @@ export default function Home() {
         { mode: 'image-upscaler', key: 'image_hd' },
         { mode: 'logo-bw', key: 'logo_bw' },
         { mode: 'layer-extractor', key: 'layer_extractor' },
-        { mode: 'photo-resizer', key: 'photo_resizer' }
+        { mode: 'photo-resizer', key: 'photo_resizer' },
+        { mode: 'text-extractor', key: 'text_extractor' }
       ];
 
       const fallback = modes.find(m => flags[m.key] === true);
@@ -303,6 +305,26 @@ export default function Home() {
                     ফটো রিসাইজার
                   </button>
                 )}
+
+                {flags.text_extractor && (
+                  <button
+                    onClick={() => {
+                      setAppMode('text-extractor');
+                      setOriginalImage(null);
+                      setLayers([]);
+                      setProcessingStep('idle');
+                      setCurrentView('upload');
+                    }}
+                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-[130px] sm:min-w-[140px] gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${
+                      appMode === 'text-extractor' 
+                        ? 'bg-blue-500 text-white shadow-md scale-[1.02]' 
+                        : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    <Languages className="w-5 h-5" />
+                    ইমেজ স্ক্যানার
+                  </button>
+                )}
               </div>
             )}
 
@@ -328,6 +350,10 @@ export default function Home() {
 
             {currentView === 'upload' && appMode === 'photo-resizer' && (
               <PhotoResizerView />
+            )}
+
+            {currentView === 'upload' && appMode === 'text-extractor' && (
+              <ImageTranslatorView />
             )}
 
             {currentView === 'processing' && <ProcessingStatus />}
