@@ -9,6 +9,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useIsMobile } from '@/lib/device';
 import { Sparkles, PenTool } from 'lucide-react';
 import ManualMaskEditor from './ManualMaskEditor';
+import { trackGeneration } from '@/lib/adminAnalytics';
 
 export default function BgRemoverView() {
   const { t } = useTranslation();
@@ -56,6 +57,7 @@ export default function BgRemoverView() {
       const resultBlob = await removeBackground(fileOrBlob, config);
       const resUrl = URL.createObjectURL(resultBlob);
       setResultUrl(resUrl);
+      trackGeneration('bg_remover');
       
     } catch (error: any) {
       console.error('BG Removal Error:', error);

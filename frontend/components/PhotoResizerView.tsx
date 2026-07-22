@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UploadCloud, Image as ImageIcon, Download, Settings, RefreshCw } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
+import { trackGeneration } from '@/lib/adminAnalytics';
 
 type Tab = 'size' | 'percentage' | 'social';
 type Format = 'Original' | 'image/jpeg' | 'image/png' | 'image/webp';
@@ -207,6 +208,7 @@ export default function PhotoResizerView() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    trackGeneration('photo_resizer');
   };
 
   const handleFile = (file: File) => {

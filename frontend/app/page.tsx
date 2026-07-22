@@ -10,6 +10,7 @@ import BgRemoverView from '@/components/BgRemoverView';
 import ImageToHdView from '@/components/ImageToHdView';
 import LogoBwView from '@/components/LogoBwView';
 import PhotoResizerView from '@/components/PhotoResizerView';
+import { listenToFeatureFlags, FeatureFlags, defaultFeatureFlags } from '@/lib/adminAnalytics';
 import { X, Loader2, CheckCircle, AlertCircle, Info, Scissors, Sparkles, ScanLine, Shapes, Crop } from 'lucide-react';
 
 import SettingsModal from '@/components/SettingsModal';
@@ -120,7 +121,53 @@ function ProcessingStatus() {
 export default function Home() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { currentView, isSettingsOpen, appMode, setAppMode, setOriginalImage, setLayers, setProcessingStep, setCurrentView } = useAppStore();
+  const { 
+    currentView, 
+    setCurrentView,
+    appMode,
+    setAppMode,
+    setOriginalImage,
+    setLayers,
+    setProcessingStep,
+    isSettingsOpen
+  } = useAppStore();
+
+  const [flags, setFlags] = useState<FeatureFlags>(defaultFeatureFlags);
+
+  useEffect(() => {
+    const unsub = listenToFeatureFlags((newFlags) => {
+      setFlags(newFlags);
+    });
+    return () => unsub();
+  }, []);
+
+  // Auto fallback if active mode is disabled by admin
+  useEffect(() => {
+    const modeFlagMap: Record<string, keyof FeatureFlags> = {
+      'bg-remover': 'bg_remover',
+      'image-upscaler': 'image_hd',
+      'logo-bw': 'logo_bw',
+      'layer-extractor': 'layer_extractor',
+      'photo-resizer': 'photo_resizer'
+    };
+
+    const currentFlagKey = modeFlagMap[appMode];
+    if (currentFlagKey && flags[currentFlagKey] === false) {
+      const modes: Array<{ mode: typeof appMode; key: keyof FeatureFlags }> = [
+        { mode: 'bg-remover', key: 'bg_remover' },
+        { mode: 'image-upscaler', key: 'image_hd' },
+        { mode: 'logo-bw', key: 'logo_bw' },
+        { mode: 'layer-extractor', key: 'layer_extractor' },
+        { mode: 'photo-resizer', key: 'photo_resizer' }
+      ];
+
+      const fallback = modes.find(m => flags[m.key] === true);
+      if (fallback) {
+        setAppMode(fallback.mode);
+      }
+    }
+  }, [appMode, flags, setAppMode]);
+
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -157,91 +204,105 @@ export default function Home() {
             {/* Premium Mode Switcher */}
             {currentView === 'upload' && (
               <div className="flex flex-wrap justify-center gap-2 bg-white/50 dark:bg-black/40 backdrop-blur-xl p-2 rounded-2xl mb-12 shadow-lg border border-white/20 dark:border-white/10 animate-in slide-in-from-top-4 fade-in duration-700 w-full sm:w-auto">
-                <button
-                  onClick={() => {
-                    setAppMode('bg-remover');
-                    setOriginalImage(null);
-                    setLayers([]);
-                    setProcessingStep('idle');
-                    setCurrentView('upload');
-                  }}
-                  className={`flex-1 sm:flex-none flex items-center justify-center min-w-[140px] gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
-                    appMode === 'bg-remover' 
-                      ? 'bg-pink-500 text-white shadow-md' 
-                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
-                  }`}
-                >
-                  <Scissors className="w-5 h-5" />
-                  ব্যাকগ্রাউন্ড রিমুভার
-                </button>
-                <button
-                  onClick={() => {
-                    setAppMode('image-upscaler');
-                    setOriginalImage(null);
-                    setLayers([]);
-                    setProcessingStep('idle');
-                    setCurrentView('upload');
-                  }}
-                  className={`flex-1 sm:flex-none flex items-center justify-center min-w-[140px] gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
-                    appMode === 'image-upscaler' 
-                      ? 'bg-indigo-500 text-white shadow-md' 
-                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
-                  }`}
-                >
-                  <Sparkles className="w-5 h-5" />
-                  Image to HD
-                </button>
-                <button
-                  onClick={() => {
-                    setAppMode('logo-bw');
-                    setOriginalImage(null);
-                    setLayers([]);
-                    setProcessingStep('idle');
-                    setCurrentView('upload');
-                  }}
-                  className={`flex-1 sm:flex-none flex items-center justify-center min-w-[140px] gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
-                    appMode === 'logo-bw'
-                      ? 'bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 shadow-md'
-                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
-                  }`}
-                >
-                  <ScanLine className="w-5 h-5" />
-                  লোগো B&W
-                </button>
-                <button
-                  onClick={() => {
-                    setAppMode('layer-extractor');
-                    setOriginalImage(null);
-                    setLayers([]);
-                    setProcessingStep('idle');
-                    setCurrentView('upload');
-                  }}
-                  className={`flex-1 sm:flex-none flex items-center justify-center min-w-[140px] gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
-                    appMode === 'layer-extractor' 
-                      ? 'bg-[var(--color-primary)] text-white shadow-md' 
-                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
-                  }`}
-                >
-                  <Shapes className="w-5 h-5" />
-                  লেয়ার এক্সট্রাক্টর
-                </button>
-                <button
-                  onClick={() => {
-                    setAppMode('photo-resizer');
-                    setOriginalImage(null);
-                    setLayers([]);
-                    setProcessingStep('idle');
-                    setCurrentView('upload');
-                  }}
-                  className={`flex-1 sm:flex-none flex items-center justify-center min-w-[140px] gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
-                    appMode === 'photo-resizer' 
-                      ? 'bg-emerald-500 text-white shadow-md' 
-                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
-                  }`}
-                >
-                  <Crop className="w-5 h-5" />
-                  ফটো রিসাইজার
-                </button>
+                {flags.bg_remover && (
+                  <button
+                    onClick={() => {
+                      setAppMode('bg-remover');
+                      setOriginalImage(null);
+                      setLayers([]);
+                      setProcessingStep('idle');
+                      setCurrentView('upload');
+                    }}
+                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-[140px] gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
+                      appMode === 'bg-remover' 
+                        ? 'bg-pink-500 text-white shadow-md' 
+                        : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    <Scissors className="w-5 h-5" />
+                    ব্যাকগ্রাউন্ড রিমুভার
+                  </button>
+                )}
+
+                {flags.image_hd && (
+                  <button
+                    onClick={() => {
+                      setAppMode('image-upscaler');
+                      setOriginalImage(null);
+                      setLayers([]);
+                      setProcessingStep('idle');
+                      setCurrentView('upload');
+                    }}
+                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-[140px] gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
+                      appMode === 'image-upscaler' 
+                        ? 'bg-indigo-500 text-white shadow-md' 
+                        : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    <Sparkles className="w-5 h-5" />
+                    Image to HD
+                  </button>
+                )}
+
+                {flags.logo_bw && (
+                  <button
+                    onClick={() => {
+                      setAppMode('logo-bw');
+                      setOriginalImage(null);
+                      setLayers([]);
+                      setProcessingStep('idle');
+                      setCurrentView('upload');
+                    }}
+                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-[140px] gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
+                      appMode === 'logo-bw'
+                        ? 'bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 shadow-md'
+                        : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    <ScanLine className="w-5 h-5" />
+                    লোগো B&W
+                  </button>
+                )}
+
+                {flags.layer_extractor && (
+                  <button
+                    onClick={() => {
+                      setAppMode('layer-extractor');
+                      setOriginalImage(null);
+                      setLayers([]);
+                      setProcessingStep('idle');
+                      setCurrentView('upload');
+                    }}
+                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-[140px] gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
+                      appMode === 'layer-extractor' 
+                        ? 'bg-[var(--color-primary)] text-white shadow-md' 
+                        : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    <Shapes className="w-5 h-5" />
+                    লেয়ার এক্সট্রাক্টর
+                  </button>
+                )}
+
+                {flags.photo_resizer && (
+                  <button
+                    onClick={() => {
+                      setAppMode('photo-resizer');
+                      setOriginalImage(null);
+                      setLayers([]);
+                      setProcessingStep('idle');
+                      setCurrentView('upload');
+                    }}
+                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-[140px] gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
+                      appMode === 'photo-resizer' 
+                        ? 'bg-emerald-500 text-white shadow-md' 
+                        : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    <Crop className="w-5 h-5" />
+                    ফটো রিসাইজার
+                  </button>
+                )}
               </div>
             )}
 

@@ -6,6 +6,7 @@ import { UploadCloud, Image as ImageIcon } from 'lucide-react';
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { processImage } from '@/lib/apiClient';
 import { RateLimitError, AllKeysExhaustedError } from '@/lib/apiKeyManager';
+import { trackGeneration } from '@/lib/adminAnalytics';
 
 export default function UploadDropzone() {
   const { t } = useTranslation();
@@ -43,6 +44,7 @@ export default function UploadDropzone() {
           }));
           setLayers(mappedLayers);
           setProcessingStep('done');
+          trackGeneration('layer_extractor');
         } catch (error: any) {
           console.error(error);
           setProcessingStep('error');

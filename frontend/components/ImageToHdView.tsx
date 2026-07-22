@@ -7,6 +7,7 @@ import Upscaler from 'upscaler';
 import esrganThick from '@upscalerjs/esrgan-thick/4x';
 import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
 import { useIsMobile } from '@/lib/device';
+import { trackGeneration } from '@/lib/adminAnalytics';
 
 export default function ImageToHdView() {
   const { imageToUpscale, setImageToUpscale, setAppMode, setImageToBgRemove, deepAiApiKey, setSettingsOpen } = useAppStore();
@@ -142,6 +143,7 @@ export default function ImageToHdView() {
       // --------------------------------------------------
 
       setResultUrl(finalUrl);
+      trackGeneration('image_hd');
       // Clean up upscaler memory
       upscaler.dispose();
 

@@ -2,6 +2,17 @@
   "hosting": {
     "site": "smartimagestudio",
     "public": "frontend/out",
+    "cleanUrls": true,
+    "rewrites": [
+      {
+        "source": "/admin",
+        "destination": "/admin.html"
+      },
+      {
+        "source": "/workspace",
+        "destination": "/workspace.html"
+      }
+    ],
     "ignore": [
       "firebase.json",
       "**/.*",

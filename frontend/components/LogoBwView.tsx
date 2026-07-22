@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { callWithRotation } from '@/lib/apiKeyManager';
 import { UploadCloud, Download, RefreshCw, Loader2, X, ImageIcon } from 'lucide-react';
+import { trackGeneration } from '@/lib/adminAnalytics';
 
 // -------------------------------------------------------
 // Gemini Vision: detect corners or deskew angle
@@ -244,6 +245,7 @@ export default function LogoBwView() {
       const output = rotateAndBinarizeCanvas(img, manualAngle, threshold, forceInvert);
       setResultUrl(output);
       setStatusMsg('✅ সম্পন্ন!');
+      trackGeneration('logo_bw');
     } catch (err: any) {
       setErrorMsg(err.message ?? 'অজানা সমস্যা হয়েছে');
     } finally {
