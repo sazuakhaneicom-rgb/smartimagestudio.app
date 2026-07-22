@@ -346,6 +346,7 @@ export interface FeatureFlags {
   photo_resizer: boolean;
   layer_extractor: boolean;
   text_extractor: boolean;
+  offline_scanner: boolean;
 }
 
 export const defaultFeatureFlags: FeatureFlags = {
@@ -354,7 +355,8 @@ export const defaultFeatureFlags: FeatureFlags = {
   logo_bw: true,
   photo_resizer: true,
   layer_extractor: true,
-  text_extractor: true
+  text_extractor: true,
+  offline_scanner: true
 };
 
 const FEATURE_FLAGS_KEY = "smart_image_feature_flags";

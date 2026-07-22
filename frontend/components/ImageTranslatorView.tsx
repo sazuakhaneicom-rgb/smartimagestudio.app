@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { callWithRotation } from '@/lib/apiKeyManager';
 import { Download, X, ImageIcon, Copy, CheckCircle2, ScanLine, FileText, Zap, WifiOff } from 'lucide-react';
-import { trackGeneration } from '@/lib/adminAnalytics';
+import { trackGeneration, listenToFeatureFlags, FeatureFlags, defaultFeatureFlags } from '@/lib/adminAnalytics';
 import { createWorker } from 'tesseract.js';
 
 const FALLBACK_MODELS = [
@@ -129,7 +129,18 @@ export default function ImageTranslatorView() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [engine, setEngine] = useState<'ai' | 'offline'>('offline');
+  const [flags, setFlags] = useState<FeatureFlags>(defaultFeatureFlags);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const unsub = listenToFeatureFlags((newFlags) => {
+      setFlags(newFlags);
+      if (!newFlags.offline_scanner && engine === 'offline') {
+        setEngine('ai');
+      }
+    });
+    return () => unsub();
+  }, [engine]);
 
   // Results State
   const [extractedText, setExtractedText] = useState('');
@@ -423,12 +434,14 @@ export default function ImageTranslatorView() {
         
         {/* Engine Selection Toggle */}
         <div className="w-full max-w-md bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl flex mb-6">
-          <button 
-            onClick={() => setEngine('offline')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all ${engine === 'offline' ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-          >
-            <WifiOff className="w-4 h-4" /> ফ্রি অফলাইন স্ক্যানার
-          </button>
+          {flags.offline_scanner && (
+            <button 
+              onClick={() => setEngine('offline')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all ${engine === 'offline' ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            >
+              <WifiOff className="w-4 h-4" /> ফ্রি অফলাইন স্ক্যানার
+            </button>
+          )}
           <button 
             onClick={() => setEngine('ai')}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all ${engine === 'ai' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}

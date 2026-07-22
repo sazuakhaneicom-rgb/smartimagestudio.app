@@ -49,7 +49,8 @@ const FEATURE_NAMES: Record<keyof FeatureFlags, { name: string; icon: React.Reac
   logo_bw: { name: 'লোগো B&W (Vectorizer)', icon: <ScanLine className="w-5 h-5" />, color: 'text-cyan-400' },
   photo_resizer: { name: 'ফটো রিসাইজার (Photo Resizer)', icon: <Crop className="w-5 h-5" />, color: 'text-emerald-400' },
   layer_extractor: { name: 'লেয়ার এক্সট্রাক্টর (Layer Extractor)', icon: <Shapes className="w-5 h-5" />, color: 'text-purple-400' },
-  text_extractor: { name: 'ইমেজ স্ক্যানার (Translator)', icon: <ScanLine className="w-5 h-5" />, color: 'text-blue-400' }
+  text_extractor: { name: 'ইমেজ স্ক্যানার (Main Toggle)', icon: <ScanLine className="w-5 h-5" />, color: 'text-blue-400' },
+  offline_scanner: { name: 'ফ্রি অফলাইন স্ক্যানার (Offline OCR)', icon: <ScanLine className="w-5 h-5" />, color: 'text-emerald-500' }
 };
 
 export default function AdminPage() {
