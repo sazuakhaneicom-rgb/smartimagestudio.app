@@ -3,7 +3,7 @@
 import { useAppStore } from '@/store/useAppStore';
 import { useTranslation } from '@/lib/i18n';
 import { UploadCloud, Image as ImageIcon } from 'lucide-react';
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import { processImage } from '@/lib/apiClient';
 import { RateLimitError, AllKeysExhaustedError } from '@/lib/apiKeyManager';
 
@@ -62,6 +62,25 @@ export default function UploadDropzone() {
     };
     reader.readAsDataURL(file);
   }, [addNotification, setCurrentView, setOriginalImage, setProcessingStep, setLayers, t]);
+
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            handleFile(file);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [handleFile]);
 
   const onDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -136,6 +155,7 @@ export default function UploadDropzone() {
           <span>{t('upload.formats')}</span>
         </div>
         <span className="opacity-80 font-medium">{t('upload.maxSize')}</span>
+        <span className="text-xs text-[#7C3AED] dark:text-[#A78BFA] font-bold mt-1">📋 অথবা Ctrl + V চেপে ছবি পেস্ট করুন</span>
       </div>
     </div>
   );

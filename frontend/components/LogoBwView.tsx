@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { callWithRotation } from '@/lib/apiKeyManager';
 import { UploadCloud, Download, RefreshCw, Loader2, X, ImageIcon } from 'lucide-react';
@@ -158,6 +158,25 @@ export default function LogoBwView() {
     };
     reader.readAsDataURL(file);
   }, []);
+
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            handleFile(file);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [handleFile]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
