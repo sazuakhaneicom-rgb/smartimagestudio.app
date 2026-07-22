@@ -302,8 +302,7 @@ export const getFeatureFlags = async (): Promise<FeatureFlags> => {
     const res = await fetch(`${FIREBASE_DB_URL}/system/featureFlags.json?t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
-      // Ensure we don't process an error object from firebase if rules are restrictive
-      if (data !== null && typeof data === 'object' && !Array.isArray(data) && !data.error && Object.keys(data).length > 0) {
+      if (data !== null && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length > 0) {
         const merged = { ...defaultFeatureFlags, ...data };
         localStorage.setItem(FEATURE_FLAGS_KEY, JSON.stringify(merged));
         return merged;
