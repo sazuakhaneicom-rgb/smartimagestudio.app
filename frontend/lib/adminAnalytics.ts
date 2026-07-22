@@ -115,7 +115,6 @@ export const sendClientHeartbeat = async () => {
         userAgent: navigator.userAgent
       })
     });
-    if (res.status === 401 || res.status === 403) firebaseAuthError = true;
   } catch (e) {}
 };
 
