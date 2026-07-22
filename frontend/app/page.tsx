@@ -203,7 +203,7 @@ export default function Home() {
             
             {/* Premium Mode Switcher */}
             {currentView === 'upload' && (
-              <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:justify-center gap-2 bg-white/50 dark:bg-black/40 backdrop-blur-xl p-2 rounded-2xl mb-8 sm:mb-12 shadow-lg border border-white/20 dark:border-white/10 animate-in slide-in-from-top-4 fade-in duration-700 w-full sm:w-auto">
+              <div className="flex flex-wrap items-center justify-center gap-2 bg-white/50 dark:bg-black/40 backdrop-blur-xl p-2 rounded-2xl mb-8 sm:mb-12 shadow-lg border border-white/20 dark:border-white/10 animate-in slide-in-from-top-4 fade-in duration-700 w-full max-w-3xl mx-auto">
                 {flags.bg_remover && (
                   <button
                     onClick={() => {
@@ -213,9 +213,9 @@ export default function Home() {
                       setProcessingStep('idle');
                       setCurrentView('upload');
                     }}
-                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-0 sm:min-w-[140px] gap-1.5 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${
+                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-[130px] sm:min-w-[140px] gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${
                       appMode === 'bg-remover' 
-                        ? 'bg-pink-500 text-white shadow-md' 
+                        ? 'bg-pink-500 text-white shadow-md scale-[1.02]' 
                         : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
                     }`}
                   >
@@ -233,9 +233,9 @@ export default function Home() {
                       setProcessingStep('idle');
                       setCurrentView('upload');
                     }}
-                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-0 sm:min-w-[140px] gap-1.5 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${
+                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-[130px] sm:min-w-[140px] gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${
                       appMode === 'image-upscaler' 
-                        ? 'bg-indigo-500 text-white shadow-md' 
+                        ? 'bg-indigo-500 text-white shadow-md scale-[1.02]' 
                         : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
                     }`}
                   >
@@ -253,9 +253,9 @@ export default function Home() {
                       setProcessingStep('idle');
                       setCurrentView('upload');
                     }}
-                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-0 sm:min-w-[140px] gap-1.5 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${
+                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-[130px] sm:min-w-[140px] gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${
                       appMode === 'logo-bw'
-                        ? 'bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 shadow-md'
+                        ? 'bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 shadow-md scale-[1.02]'
                         : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
                     }`}
                   >
@@ -273,9 +273,9 @@ export default function Home() {
                       setProcessingStep('idle');
                       setCurrentView('upload');
                     }}
-                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-0 sm:min-w-[140px] gap-1.5 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${
+                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-[130px] sm:min-w-[140px] gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${
                       appMode === 'layer-extractor' 
-                        ? 'bg-[var(--color-primary)] text-white shadow-md' 
+                        ? 'bg-[var(--color-primary)] text-white shadow-md scale-[1.02]' 
                         : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
                     }`}
                   >
@@ -293,9 +293,9 @@ export default function Home() {
                       setProcessingStep('idle');
                       setCurrentView('upload');
                     }}
-                    className={`col-span-2 sm:col-span-1 flex-1 sm:flex-none flex items-center justify-center min-w-0 sm:min-w-[140px] gap-1.5 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${
+                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-[130px] sm:min-w-[140px] gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${
                       appMode === 'photo-resizer' 
-                        ? 'bg-emerald-500 text-white shadow-md' 
+                        ? 'bg-emerald-500 text-white shadow-md scale-[1.02]' 
                         : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
                     }`}
                   >
