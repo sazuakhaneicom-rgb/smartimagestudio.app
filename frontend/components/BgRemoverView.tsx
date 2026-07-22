@@ -44,17 +44,29 @@ export default function BgRemoverView() {
       setOriginalUrl(origUrl);
       setResultUrl(null);
       
-        const config: Config = {
-          model: 'isnet_quint8', // Lightest 8-bit quantized model for 1-2s removal
+      let simulatedProgress: NodeJS.Timeout;
+
+      const config: Config = {
+        // Removed 'model: isnet_quint8' to use the default HIGH QUALITY (isnet_fp16) model
         output: { format: 'image/png', quality: 1 },
         progress: (key: string, current: number, total: number) => {
-          // current / total is the progress
-          const p = Math.round((current / total) * 100);
-          setProgress(p);
+          // Download progress takes up to 75%
+          const downloadPercent = Math.round((current / total) * 75);
+          setProgress(prev => Math.max(prev, downloadPercent));
+          
+          // Once download is near complete, start fake progress for the actual AI processing time
+          if (downloadPercent >= 75 && !simulatedProgress) {
+            simulatedProgress = setInterval(() => {
+              setProgress(p => (p < 98 ? p + 1 : p));
+            }, 150);
+          }
         }
       };
 
       const resultBlob = await removeBackground(fileOrBlob, config);
+      if (simulatedProgress) clearInterval(simulatedProgress);
+      setProgress(100);
+      
       const resUrl = URL.createObjectURL(resultBlob);
       setResultUrl(resUrl);
       trackGeneration('bg_remover');
