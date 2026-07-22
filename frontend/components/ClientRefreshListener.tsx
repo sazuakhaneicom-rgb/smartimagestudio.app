@@ -34,9 +34,20 @@ export default function ClientRefreshListener() {
       }, 1200);
     });
 
+    // 3. Listen to local custom event for triggering animation in the same tab (e.g. admin panel)
+    const handleLocalTrigger = () => {
+      console.log('🔄 Local refresh triggered. Showing animation...');
+      setIsRefreshing(true);
+      setTimeout(() => {
+        if (typeof window !== 'undefined') window.location.reload();
+      }, 1200);
+    };
+    window.addEventListener('trigger_refresh_animation', handleLocalTrigger);
+
     return () => {
       clearInterval(heartbeatInterval);
       unsubscribe();
+      window.removeEventListener('trigger_refresh_animation', handleLocalTrigger);
     };
   }, []);
 

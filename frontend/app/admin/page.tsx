@@ -71,6 +71,7 @@ export default function AdminPage() {
   const [isSavingFlags, setIsSavingFlags] = useState(false);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Check saved admin session
   useEffect(() => {
@@ -141,6 +142,9 @@ export default function AdminPage() {
     if (success) {
       setActionSuccess('💾 এজেন্ট সেটিংস সফলভাবে সেভ করা হয়েছে এবং ওয়েবসাইটে প্রয়োগ হয়েছে!');
       setTimeout(() => setActionSuccess(null), 5000);
+    } else {
+      setActionError('❌ ফায়ারবেস পারমিশন এরর: আপনার Firebase Database Rules সেট করা নেই। রুলস আপডেট না করলে ডাটা লাইভ ওয়েবসাইটে সেভ হবে না!');
+      setTimeout(() => setActionError(null), 10000);
     }
   };
 
@@ -151,6 +155,7 @@ export default function AdminPage() {
 
     if (success) {
       setActionSuccess('🌐 সকল ভিজিটরের ব্রাউজারে হার্ড রিফ্রেশ সিগন্যাল পাঠানো হয়েছে!');
+      window.dispatchEvent(new Event('trigger_refresh_animation'));
       const updated = await getAnalyticsSummary();
       setMetrics(updated);
       setTimeout(() => setActionSuccess(null), 5000);
@@ -276,6 +281,14 @@ export default function AdminPage() {
           <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-400 font-bold text-sm flex items-center gap-3 animate-in slide-in-from-top-4 shadow-lg shadow-emerald-500/10">
             <CheckCircle2 className="w-5 h-5 shrink-0" />
             <span>{actionSuccess}</span>
+          </div>
+        )}
+        
+        {/* Action Error Banner */}
+        {actionError && (
+          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-400 font-bold text-sm flex items-center gap-3 animate-in slide-in-from-top-4 shadow-lg shadow-red-500/10">
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+            <span>{actionError}</span>
           </div>
         )}
 
