@@ -7,7 +7,7 @@ import { removeBackground, Config } from '@imgly/background-removal';
 import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
 import { useAppStore } from '@/store/useAppStore';
 import { useIsMobile } from '@/lib/device';
-import { Sparkles, PenTool } from 'lucide-react';
+import { Sparkles, PenTool, Droplet } from 'lucide-react';
 import ManualMaskEditor from './ManualMaskEditor';
 import { trackGeneration } from '@/lib/adminAnalytics';
 
@@ -183,6 +183,56 @@ export default function BgRemoverView() {
     setIsEditingMask(false);
   };
 
+  const processLogoMode = async (bgType: 'white' | 'black') => {
+    if (!originalUrl) return;
+    setIsProcessing(true);
+    setProgress(100);
+    
+    try {
+      const img = new Image();
+      img.src = originalUrl;
+      await new Promise(r => img.onload = r);
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      const tolerance = 50; 
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i+1];
+        const b = data[i+2];
+        const a = data[i+3];
+        
+        if (a === 0) continue;
+        
+        if (bgType === 'white') {
+           if (r > 255 - tolerance && g > 255 - tolerance && b > 255 - tolerance) {
+              const distance = Math.max(255 - r, 255 - g, 255 - b); 
+              data[i+3] = (distance / tolerance) * 255;
+           }
+        } else {
+           if (r < tolerance && g < tolerance && b < tolerance) {
+              const distance = Math.max(r, g, b); 
+              data[i+3] = (distance / tolerance) * 255;
+           }
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+      setResultUrl(canvas.toDataURL('image/png'));
+    } catch (e) {
+       console.error("Logo mode error", e);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   if (isProcessing || (originalUrl && !resultUrl)) {
     return (
       <div className="w-full max-w-2xl mx-auto flex flex-col items-center justify-center p-12 glass-panel rounded-[2rem] animate-in zoom-in-95 duration-500">
@@ -292,6 +342,27 @@ export default function BgRemoverView() {
                 <RefreshCw className="w-4 h-4" />
                 নতুন ছবি
               </button>
+            </div>
+
+            {/* Logo Mode Buttons */}
+            <div className="flex flex-col items-center justify-center gap-3 w-full mt-2 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl border border-gray-200 dark:border-gray-800">
+               <span className="text-sm font-bold text-gray-500 flex items-center gap-2">
+                 <Droplet className="w-4 h-4" /> লোগো বা সিগনেচারের জন্য (One-click):
+               </span>
+               <div className="flex flex-wrap items-center justify-center gap-3">
+                 <button 
+                   onClick={() => processLogoMode('white')} 
+                   className="px-4 py-2 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-gray-400 text-gray-700 dark:text-gray-200 font-bold rounded-lg shadow-sm transition-all"
+                 >
+                   সাদা ব্যাকগ্রাউন্ড মুছুন
+                 </button>
+                 <button 
+                   onClick={() => processLogoMode('black')} 
+                   className="px-4 py-2 bg-gray-900 dark:bg-black border-2 border-gray-700 hover:border-gray-500 text-white font-bold rounded-lg shadow-sm transition-all"
+                 >
+                   কালো ব্যাকগ্রাউন্ড মুছুন
+                 </button>
+               </div>
             </div>
 
           </div>
