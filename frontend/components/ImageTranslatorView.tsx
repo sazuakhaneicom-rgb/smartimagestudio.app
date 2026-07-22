@@ -215,7 +215,7 @@ export default function ImageTranslatorView() {
       setExtractedText(nicelyFormattedText || 'কোনো টেক্সট পাওয়া যায়নি।');
       await worker.terminate();
       
-      trackGeneration('text_extractor_offline');
+      trackGeneration('text_extractor');
     } catch (e: any) {
       console.error('Tesseract Error:', e);
       setErrorMsg('অফলাইন স্ক্যানিং ব্যর্থ হয়েছে: ' + (typeof e === 'string' ? e : (e.message || JSON.stringify(e))));
