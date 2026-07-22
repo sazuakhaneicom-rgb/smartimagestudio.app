@@ -5,6 +5,14 @@
 
 export type Category = 'bg_remover' | 'image_hd' | 'logo_bw' | 'photo_resizer' | 'layer_extractor';
 
+export interface UserSession {
+  sessionId: string;
+  lastSeen: number;
+  userAgent: string;
+  deviceType: 'mobile' | 'desktop' | 'tablet';
+  isBlocked?: boolean;
+}
+
 export interface AnalyticsSummary {
   activeUsers: number;
   totalGenerations: number;
@@ -105,14 +113,20 @@ export const sendClientHeartbeat = async () => {
   if (typeof window === 'undefined') return;
 
   const now = Date.now();
+  const ua = navigator.userAgent || '';
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  const isTablet = /iPad|Android(?!.*Mobile)/i.test(ua);
+  const deviceType = isTablet ? 'tablet' : isMobile ? 'mobile' : 'desktop';
 
   try {
-    const res = await fetch(`${FIREBASE_DB_URL}/sessions/${CLIENT_SESSION_ID}.json`, {
+    await fetch(`${FIREBASE_DB_URL}/sessions/${CLIENT_SESSION_ID}.json`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        sessionId: CLIENT_SESSION_ID,
         lastSeen: now,
-        userAgent: navigator.userAgent
+        userAgent: ua,
+        deviceType
       })
     });
   } catch (e) {}
@@ -215,24 +229,25 @@ export const getAnalyticsSummary = async (): Promise<AnalyticsSummary> => {
     const sessData = await sessRes.json() || {};
     const refreshData = await refreshRes.json() || 0;
 
-    // Count active sessions in last 2 minutes
+    // Count active sessions in last 5 minutes
     let activeCount = 0;
     if (sessData && typeof sessData === 'object') {
       Object.values(sessData).forEach((sess: any) => {
-        if (sess?.lastSeen && (now - sess.lastSeen) < 2 * 60 * 1000) {
+        if (sess?.lastSeen && (now - sess.lastSeen) < 5 * 60 * 1000) {
           activeCount++;
         }
       });
     }
 
-    const total = genData.total || local.totalGenerations;
     const breakdown = {
-      bg_remover: genData.bg_remover || local.breakdown.bg_remover,
-      image_hd: genData.image_hd || local.breakdown.image_hd,
-      logo_bw: genData.logo_bw || local.breakdown.logo_bw,
-      photo_resizer: genData.photo_resizer || local.breakdown.photo_resizer,
-      layer_extractor: genData.layer_extractor || local.breakdown.layer_extractor
+      bg_remover: Number(genData.bg_remover || 0),
+      image_hd: Number(genData.image_hd || 0),
+      logo_bw: Number(genData.logo_bw || 0),
+      photo_resizer: Number(genData.photo_resizer || 0),
+      layer_extractor: Number(genData.layer_extractor || 0)
     };
+    const calculatedTotal = breakdown.bg_remover + breakdown.image_hd + breakdown.logo_bw + breakdown.photo_resizer + breakdown.layer_extractor;
+    const total = Number(genData.total || calculatedTotal);
 
     return {
       activeUsers: Math.max(1, activeCount),
@@ -249,6 +264,82 @@ export const getAnalyticsSummary = async (): Promise<AnalyticsSummary> => {
       lastRemoteRefresh: 0
     };
   }
+};
+
+// 5b. Fetch all active sessions with blocked status for Admin Modal
+export const getActiveSessions = async (): Promise<UserSession[]> => {
+  try {
+    const [sessRes, blockRes] = await Promise.all([
+      fetch(`${FIREBASE_DB_URL}/sessions.json?t=${Date.now()}`),
+      fetch(`${FIREBASE_DB_URL}/blockedSessions.json?t=${Date.now()}`)
+    ]);
+
+    const sessData = (await sessRes.json()) || {};
+    const blockData = (await blockRes.json()) || {};
+    const now = Date.now();
+
+    const sessions: UserSession[] = [];
+
+    if (sessData && typeof sessData === 'object') {
+      Object.entries(sessData).forEach(([id, sess]: [string, any]) => {
+        if (sess && typeof sess === 'object' && sess.lastSeen) {
+          if (now - sess.lastSeen < 10 * 60 * 1000) {
+            const isBlocked = !!(blockData && blockData[id]);
+            sessions.push({
+              sessionId: id,
+              lastSeen: sess.lastSeen,
+              userAgent: sess.userAgent || 'Unknown Device',
+              deviceType: sess.deviceType || 'desktop',
+              isBlocked
+            });
+          }
+        }
+      });
+    }
+
+    return sessions.sort((a, b) => b.lastSeen - a.lastSeen);
+  } catch (e) {
+    return [];
+  }
+};
+
+// 5c. Block a session
+export const blockSession = async (sessionId: string): Promise<boolean> => {
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/blockedSessions/${sessionId}.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blockedAt: Date.now() })
+    });
+    return res.ok;
+  } catch (e) {
+    return false;
+  }
+};
+
+// 5d. Unblock a session
+export const unblockSession = async (sessionId: string): Promise<boolean> => {
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/blockedSessions/${sessionId}.json`, {
+      method: 'DELETE'
+    });
+    return res.ok;
+  } catch (e) {
+    return false;
+  }
+};
+
+// 5e. Check if current client session is blocked
+export const checkIfSessionBlocked = async (): Promise<boolean> => {
+  if (typeof window === 'undefined') return false;
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/blockedSessions/${CLIENT_SESSION_ID}.json?t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data !== null && data !== undefined;
+    }
+  } catch (e) {}
+  return false;
 };
 
 // 6. Reset Analytics Data (Admin Action)
