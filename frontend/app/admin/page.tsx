@@ -494,12 +494,6 @@ export default function AdminPage() {
               <h2 className="text-lg font-black text-white">ফিচার ভিত্তিক ছবি জেনারেট পরিসংখ্যান</h2>
               <p className="text-xs text-gray-400 font-medium">প্রতিটি টুলস আলাদাভাবে কতবার ব্যবহার করা হয়েছে</p>
             </div>
-            <button 
-              onClick={handleResetMetrics}
-              className="px-3 py-1.5 bg-gray-800 hover:bg-red-900/40 text-gray-400 hover:text-red-300 border border-gray-700 hover:border-red-500/50 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
-            >
-              <RotateCcw className="w-3.5 h-3.5" /> রিসেট ডাটা
-            </button>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
