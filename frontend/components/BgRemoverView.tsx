@@ -44,7 +44,7 @@ export default function BgRemoverView() {
       setOriginalUrl(origUrl);
       setResultUrl(null);
       
-      let simulatedProgress: NodeJS.Timeout;
+      let simulatedProgress: NodeJS.Timeout | null = null;
 
       const config: Config = {
         // Removed 'model: isnet_quint8' to use the default HIGH QUALITY (isnet_fp16) model
