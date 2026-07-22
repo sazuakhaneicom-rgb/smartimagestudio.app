@@ -1,0 +1,46 @@
+import type { Metadata } from 'next';
+import { Anek_Bangla, Outfit, Inter } from 'next/font/google';
+import './globals.css';
+import { Providers } from '@/components/Providers';
+
+const anekBangla = Anek_Bangla({
+  subsets: ['bengali', 'latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-bangla',
+});
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-heading-en',
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-body-en',
+});
+
+export const metadata: Metadata = {
+  title: "Smart Image Studio",
+  description: "AI দিয়ে ইমেজের লেয়ার আলাদা করুন, ব্যাকগ্রাউন্ড রিমুভ করুন এবং আপস্কেল করুন",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="bn" suppressHydrationWarning>
+      <body 
+        className={`${anekBangla.variable} ${outfit.variable} ${inter.variable} h-[100dvh] overflow-hidden bg-background text-text-primary font-sans transition-colors`}
+        data-lang="bn"
+      >
+        <Providers>
+          {children}
+        </Providers>
+      </body>
+    </html>
+  );
+}
