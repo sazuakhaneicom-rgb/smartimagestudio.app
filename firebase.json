@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "smart-image-studio-app",
     "public": "frontend/out",
     "ignore": [
       "firebase.json",
