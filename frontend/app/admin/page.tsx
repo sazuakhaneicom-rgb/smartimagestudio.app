@@ -73,6 +73,10 @@ export default function AdminPage() {
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  // Track unsaved changes to prevent the live listener from overwriting the UI before save
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const hasUnsavedChangesRef = React.useRef(false);
+
   // Check saved admin session
   useEffect(() => {
     const savedAuth = localStorage.getItem('smart_studio_admin_auth');
@@ -92,7 +96,9 @@ export default function AdminPage() {
 
     const fetchFlags = async () => {
       const flags = await getFeatureFlags();
-      setFeatureFlags(flags);
+      if (!hasUnsavedChangesRef.current) {
+        setFeatureFlags(flags);
+      }
     };
 
     fetchMetrics();
@@ -101,7 +107,9 @@ export default function AdminPage() {
     const interval = setInterval(fetchMetrics, 5000); // 5 sec live polling
 
     const unsubFlags = listenToFeatureFlags((flags) => {
-      setFeatureFlags(flags);
+      if (!hasUnsavedChangesRef.current) {
+        setFeatureFlags(flags);
+      }
     });
 
     return () => {
@@ -132,6 +140,8 @@ export default function AdminPage() {
 
   const handleToggleFeature = (feature: keyof FeatureFlags) => {
     setFeatureFlags(prev => ({ ...prev, [feature]: !prev[feature] }));
+    setHasUnsavedChanges(true);
+    hasUnsavedChangesRef.current = true;
   };
 
   const handleSaveFeatureFlags = async () => {
@@ -140,6 +150,8 @@ export default function AdminPage() {
     setIsSavingFlags(false);
 
     if (success) {
+      setHasUnsavedChanges(false);
+      hasUnsavedChangesRef.current = false;
       setActionSuccess('💾 এজেন্ট সেটিংস সফলভাবে সেভ করা হয়েছে এবং ওয়েবসাইটে প্রয়োগ হয়েছে!');
       setTimeout(() => setActionSuccess(null), 5000);
     } else {
@@ -308,10 +320,14 @@ export default function AdminPage() {
             <button 
               onClick={handleSaveFeatureFlags}
               disabled={isSavingFlags}
-              className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shrink-0"
+              className={`px-6 py-3 font-extrabold text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 shrink-0 ${
+                hasUnsavedChanges 
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white shadow-amber-500/30 animate-pulse hover:scale-105 active:scale-95' 
+                  : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white shadow-emerald-500/25 hover:scale-105 active:scale-95'
+              }`}
             >
               <Save className={`w-4 h-4 ${isSavingFlags ? 'animate-spin' : ''}`} />
-              💾 সেটিংস সেভ করুন (Save Settings)
+              {hasUnsavedChanges ? '⚠️ আনসেভড ডাটা! সেভ করুন' : '💾 সেটিংস সেভ করুন (Save)'}
             </button>
           </div>
 
