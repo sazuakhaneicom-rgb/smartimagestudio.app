@@ -104,7 +104,7 @@ export default function UploadDropzone() {
 
   return (
     <div 
-      className={`relative w-full aspect-square max-w-[min(28rem,60vh)] rounded-[2.5rem] border-4 border-dashed transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] flex flex-col items-center justify-center p-8 group cursor-pointer overflow-hidden shadow-2xl
+      className={`relative w-full aspect-square sm:aspect-square max-w-[min(22rem,80vw)] sm:max-w-[min(28rem,60vh)] mx-auto rounded-[2.5rem] border-4 border-dashed transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] flex flex-col items-center justify-center p-6 sm:p-8 group cursor-pointer overflow-hidden shadow-2xl
         ${isDragging 
           ? 'border-[#7C3AED] bg-[#7C3AED]/10 scale-[1.02] shadow-[0_0_80px_rgba(124,58,237,0.3)]' 
           : 'border-gray-300 dark:border-gray-700 bg-white/40 dark:bg-black/40 hover:border-[#7C3AED]/70 hover:bg-[#7C3AED]/5 hover:scale-[1.01] hover:shadow-[0_0_50px_rgba(124,58,237,0.15)]'
@@ -143,11 +143,14 @@ export default function UploadDropzone() {
         <UploadCloud className="w-12 h-12 text-[#7C3AED] dark:text-[#A78BFA] animate-[bounce_3s_ease-in-out_infinite]" />
       </div>
 
-      <h3 className="relative z-10 text-3xl font-extrabold text-gray-900 dark:text-white mb-3 text-center transition-colors tracking-tight">
+      <h3 className="relative z-10 text-3xl font-extrabold text-gray-900 dark:text-white mb-3 text-center transition-colors tracking-tight hidden sm:block">
         {t('upload.dragDrop')}
       </h3>
+      <h3 className="relative z-10 text-2xl font-extrabold text-gray-900 dark:text-white mb-2 text-center transition-colors tracking-tight sm:hidden px-2 leading-tight">
+        এখানে ট্যাপ করে<br/>ছবি আপলোড করুন
+      </h3>
       
-      <p className="relative z-10 text-lg font-bold text-[#7C3AED] dark:text-[#A78BFA] group-hover:text-pink-500 mb-10 text-center cursor-pointer transition-colors duration-500">
+      <p className="relative z-10 text-lg font-bold text-[#7C3AED] dark:text-[#A78BFA] group-hover:text-pink-500 mb-6 sm:mb-10 text-center cursor-pointer transition-colors duration-500 hidden sm:block">
         {t('upload.orClick')}
       </p>
 

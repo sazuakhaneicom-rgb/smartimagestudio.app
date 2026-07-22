@@ -93,7 +93,7 @@ export default function CanvasPreview() {
       className="w-full h-full flex items-center justify-center relative"
     >
       <div
-        className="relative rounded-xl shadow-lg border border-purple-200/50 dark:border-purple-900/30 overflow-hidden transition-all duration-300"
+        className="relative w-full h-full min-h-[40vh] lg:min-h-0 rounded-xl shadow-lg border border-purple-200/50 dark:border-purple-900/30 overflow-hidden transition-all duration-300"
         style={{
           boxShadow: '0 10px 40px -10px rgba(124, 58, 237, 0.15)',
         }}
