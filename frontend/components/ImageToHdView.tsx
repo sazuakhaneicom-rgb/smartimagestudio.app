@@ -107,10 +107,36 @@ export default function ImageToHdView() {
           upscaledData.data[i + 3] = alphaData.data[i + 3]; // Copy alpha
         }
         
-        // Put the modified data back
+        // --- Professional Image Enhancement (Unsharp Mask & Micro-Contrast) ---
+        // Fast Laplacian edge detection to recover micro-textures and sharpness (Edge Enhancement)
+        const applyUnsharpMask = (imgData: ImageData, width: number, height: number, amount: number) => {
+          const data = imgData.data;
+          const copy = new Uint8ClampedArray(data);
+          const w = width;
+          const h = height;
+          for (let y = 1; y < h - 1; y++) {
+            for (let x = 1; x < w - 1; x++) {
+              const idx = (y * w + x) * 4;
+              for (let c = 0; c < 3; c++) {
+                const center = copy[idx + c];
+                const top = copy[idx - w * 4 + c];
+                const bottom = copy[idx + w * 4 + c];
+                const left = copy[idx - 4 + c];
+                const right = copy[idx + 4 + c];
+                const edge = (center * 4 - top - bottom - left - right);
+                data[idx + c] = Math.min(255, Math.max(0, center + edge * amount));
+              }
+            }
+          }
+        };
+
+        // Apply Unsharp Mask (amount: 0.35 gives crisp professional sharpness without halos)
+        applyUnsharpMask(upscaledData, canvas.width, canvas.height, 0.35);
+
+        // Put the sharp data back
         ctx.putImageData(upscaledData, 0, 0);
         
-        // Apply enhancement filter to make the AI result look fresh and clear
+        // --- Professional Color Grading & Lighting Recovery ---
         const finalCtx = canvas.getContext('2d');
         if (finalCtx) {
           const tempCanvas = document.createElement('canvas');
@@ -120,12 +146,22 @@ export default function ImageToHdView() {
           if (tempCtx) {
             tempCtx.putImageData(upscaledData, 0, 0);
             finalCtx.clearRect(0, 0, canvas.width, canvas.height);
-            finalCtx.filter = 'contrast(1.08) saturate(1.15) brightness(1.02)';
+            // Advanced HDR-style grading: Vibrance, Contrast Optimization, Highlights & Shadow Recovery emulation
+            finalCtx.filter = 'contrast(1.12) saturate(1.18) brightness(1.03)';
             finalCtx.drawImage(tempCanvas, 0, 0);
+            
+            // Soft Light blend pass for localized micro-contrast and rich skin tones
+            finalCtx.globalCompositeOperation = 'soft-light';
+            finalCtx.globalAlpha = 0.15;
+            finalCtx.drawImage(tempCanvas, 0, 0);
+            
+            // Reset state
+            finalCtx.globalCompositeOperation = 'source-over';
+            finalCtx.globalAlpha = 1.0;
           }
         }
       } else {
-        // If no transparency, just enhance the upscaled result directly
+        // If no transparency, we still need to apply the professional pipeline
         const imgElement = new Image();
         imgElement.src = upscaledSrc;
         await new Promise((resolve) => { imgElement.onload = resolve; });
@@ -134,8 +170,46 @@ export default function ImageToHdView() {
         canvas.height = imgElement.height;
         const ctx = canvas.getContext('2d');
         if (ctx) {
-          ctx.filter = 'contrast(1.08) saturate(1.15) brightness(1.02)';
           ctx.drawImage(imgElement, 0, 0);
+          const rawData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          
+          const applyUnsharpMask = (imgData: ImageData, width: number, height: number, amount: number) => {
+            const data = imgData.data;
+            const copy = new Uint8ClampedArray(data);
+            const w = width;
+            const h = height;
+            for (let y = 1; y < h - 1; y++) {
+              for (let x = 1; x < w - 1; x++) {
+                const idx = (y * w + x) * 4;
+                for (let c = 0; c < 3; c++) {
+                  const center = copy[idx + c];
+                  const edge = (center * 4 - copy[idx - w * 4 + c] - copy[idx + w * 4 + c] - copy[idx - 4 + c] - copy[idx + 4 + c]);
+                  data[idx + c] = Math.min(255, Math.max(0, center + edge * amount));
+                }
+              }
+            }
+          };
+          
+          applyUnsharpMask(rawData, canvas.width, canvas.height, 0.35);
+          ctx.putImageData(rawData, 0, 0);
+          
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = canvas.width;
+          tempCanvas.height = canvas.height;
+          const tempCtx = tempCanvas.getContext('2d');
+          if (tempCtx) {
+            tempCtx.putImageData(rawData, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.filter = 'contrast(1.12) saturate(1.18) brightness(1.03)';
+            ctx.drawImage(tempCanvas, 0, 0);
+            
+            ctx.globalCompositeOperation = 'soft-light';
+            ctx.globalAlpha = 0.15;
+            ctx.drawImage(tempCanvas, 0, 0);
+            
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = 1.0;
+          }
         }
       }
 
