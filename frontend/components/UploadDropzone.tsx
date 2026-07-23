@@ -10,7 +10,7 @@ import { trackGeneration } from '@/lib/adminAnalytics';
 
 export default function UploadDropzone() {
   const { t } = useTranslation();
-  const { setOriginalImage, setCurrentView, setProcessingStep, addNotification, setLayers } = useAppStore();
+  const { setOriginalImage, setCurrentView, setProcessingStep, addNotification, setLayers, siteSettings } = useAppStore();
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
