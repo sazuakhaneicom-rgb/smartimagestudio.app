@@ -554,14 +554,10 @@ export const listenToSiteSettings = (onChange: (settings: GlobalSiteSettings) =>
 
 export interface AppLinks {
   geminiUrl: string;
-  replicateUrl: string;
-  photoroomUrl: string;
 }
 
 export const defaultAppLinks: AppLinks = {
-  geminiUrl: "https://aistudio.google.com/app/apikey",
-  replicateUrl: "https://replicate.com/account/api-tokens",
-  photoroomUrl: "https://www.photoroom.com/api"
+  geminiUrl: "https://aistudio.google.com/app/apikey"
 };
 
 const APP_LINKS_KEY = "smart_image_app_links";

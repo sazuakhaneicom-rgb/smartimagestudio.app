@@ -12,10 +12,6 @@ export default function SettingsModal() {
   const setSettingsOpen = useAppStore((state) => state.setSettingsOpen);
   const apiKeys = useAppStore((state) => state.apiKeys) || [];
   const addApiKey = useAppStore((state) => state.addApiKey);
-  const replicateApiKey = useAppStore((state) => state.replicateApiKey);
-  const setReplicateApiKey = useAppStore((state) => state.setReplicateApiKey);
-  const photoroomApiKey = useAppStore((state) => state.photoroomApiKey);
-  const setPhotoroomApiKey = useAppStore((state) => state.setPhotoroomApiKey);
   const appLinks = useAppStore((state) => state.appLinks);
   
   const [newKey, setNewKey] = useState('');
@@ -103,55 +99,6 @@ export default function SettingsModal() {
                   এখানে ক্লিক করে API কী তৈরি করুন
                 </a>
               </p>
-            </div>
-          </div>
-
-          <div className="mt-8 border-t border-gray-100 dark:border-gray-800 pt-6">
-            <h3 className="text-sm font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Sparkles size={16} />
-              Premium Cloud APIs (Ultra Quality)
-            </h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Replicate API Key (For Remini-level Face Restoration)</label>
-                <input
-                  type="password"
-                  value={replicateApiKey || ''}
-                  onChange={(e) => setReplicateApiKey(e.target.value || null)}
-                  placeholder="r8_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all mb-1"
-                />
-                <a 
-                  href={appLinks.replicateUrl || "https://replicate.com/account/api-tokens"}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 w-fit"
-                >
-                  <ExternalLink size={10} />
-                  এখানে ক্লিক করে Replicate API Key তৈরি করুন
-                </a>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Photoroom API Key (For Remove.bg-level BG Removal)</label>
-                <input
-                  type="password"
-                  value={photoroomApiKey || ''}
-                  onChange={(e) => setPhotoroomApiKey(e.target.value || null)}
-                  placeholder="xxxxxxxxxxxxxxxxxxxxxx"
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all mb-1"
-                />
-                <a 
-                  href={appLinks.photoroomUrl || "https://www.photoroom.com/api"}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-[11px] font-semibold text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1 w-fit"
-                >
-                  <ExternalLink size={10} />
-                  এখানে ক্লিক করে Photoroom API Key তৈরি করুন
-                </a>
-              </div>
             </div>
           </div>
         </div>

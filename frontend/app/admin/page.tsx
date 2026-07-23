@@ -647,24 +647,6 @@ export default function AdminPage() {
                 className="w-full bg-[#0F0A1A] border border-blue-500/30 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all font-mono text-sm"
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Replicate API Link (Ultra HD)</label>
-              <input 
-                type="url" 
-                value={appLinks.replicateUrl}
-                onChange={(e) => setAppLinks({ ...appLinks, replicateUrl: e.target.value })}
-                className="w-full bg-[#0F0A1A] border border-blue-500/30 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all font-mono text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Photoroom API Link (Background Remover)</label>
-              <input 
-                type="url" 
-                value={appLinks.photoroomUrl}
-                onChange={(e) => setAppLinks({ ...appLinks, photoroomUrl: e.target.value })}
-                className="w-full bg-[#0F0A1A] border border-blue-500/30 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all font-mono text-sm"
-              />
-            </div>
           </div>
         </div>
         

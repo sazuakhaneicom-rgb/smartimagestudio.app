@@ -10,7 +10,7 @@ import { useIsMobile } from '@/lib/device';
 import { trackGeneration } from '@/lib/adminAnalytics';
 
 export default function ImageToHdView() {
-  const { imageToUpscale, setImageToUpscale, setAppMode, setImageToBgRemove, deepAiApiKey, setSettingsOpen, upscalerMode, setUpscalerMode, replicateApiKey, siteSettings } = useAppStore();
+  const { imageToUpscale, setImageToUpscale, setAppMode, setImageToBgRemove, deepAiApiKey, setSettingsOpen, siteSettings } = useAppStore();
   const isMobile = useIsMobile();
   
   const [originalUrl, setOriginalUrl] = useState<string | null>(imageToUpscale || null);
@@ -43,75 +43,6 @@ export default function ImageToHdView() {
         img.onerror = reject;
       });
 
-      if (upscalerMode === 'cloud') {
-        if (!replicateApiKey) {
-          setErrorMsg('Ultra Quality (Face Restoration) ব্যবহারের জন্য সেটিংসে গিয়ে Replicate API Key যুক্ত করুন।');
-          setIsProcessing(false);
-          setSettingsOpen(true);
-          return;
-        }
-        
-        setProgress(10);
-        
-        // Convert image to base64 for Replicate API
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error("Canvas context failed");
-        ctx.drawImage(img, 0, 0);
-        const base64Data = canvas.toDataURL('image/jpeg', 0.95);
-        
-        setProgress(20);
-        
-        // Call Replicate API (CodeFormer for Face Restoration & Enhance)
-        const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://api.replicate.com/v1/predictions');
-        const response = await fetch(proxyUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Token ${replicateApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            version: "7de2ea26c616d5bf2245ad0d5e24f0ff9a6204578a5c876db53142edd9d2cd56",
-            input: {
-              image: base64Data,
-              upscale: 2,
-              face_upsample: true,
-              background_enhance: true,
-              codeformer_fidelity: 0.5
-            }
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Replicate API Request Failed: ' + response.statusText);
-        }
-
-        let prediction = await response.json();
-        
-        // Poll for result
-        let pollCount = 0;
-        while (prediction.status !== "succeeded" && prediction.status !== "failed") {
-          await new Promise(r => setTimeout(r, 1500));
-          pollCount++;
-          setProgress(Math.min(95, 20 + pollCount * 5));
-          
-          const pollUrl = 'https://corsproxy.io/?' + encodeURIComponent(prediction.urls.get);
-          const poll = await fetch(pollUrl, {
-            headers: { 'Authorization': `Token ${replicateApiKey}` }
-          });
-          prediction = await poll.json();
-        }
-        
-        if (prediction.status === 'failed') {
-          throw new Error('Prediction failed');
-        }
-        
-        setProgress(100);
-        setResultUrl(prediction.output); // Replicate returns a URL
-        trackGeneration('image_hd');
-      } else {
         // --- Local Offline Upscaler (ESRGAN) ---
         // Upscaler instance using esrgan-thick for extreme denoising and smoothing (vector-like)
         const upscaler = new Upscaler({ model: esrganThick });
@@ -283,13 +214,10 @@ export default function ImageToHdView() {
           }
         }
 
-        const finalUrl = canvas.toDataURL('image/png');
+        const finalUrl = canvas.toDataURL('image/png', 1.0);
         setResultUrl(finalUrl);
         trackGeneration('image_hd');
-        // Clean up upscaler memory
         upscaler.dispose();
-      }
-
 
     } catch (err: any) {
       console.error('Upscale error:', err);
@@ -403,9 +331,7 @@ export default function ImageToHdView() {
           ছবি HD করা হচ্ছে...
         </h2>
         <p className="text-amber-600 dark:text-amber-400 font-bold mb-6 text-center max-w-md bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
-          {upscalerMode === 'cloud' 
-            ? 'Cloud AI দিয়ে ফেস রিস্টোর করা হচ্ছে, দয়া করে অপেক্ষা করুন...' 
-            : '⚠️ ব্রাউজার ক্রাশ রোধ করতে অনুগ্রহ করে এই ট্যাবটি খোলা রাখুন। অন্য ট্যাবে গেলে কাজটি বন্ধ হয়ে যেতে পারে।'}
+          ⚠️ ব্রাউজার ক্রাশ রোধ করতে অনুগ্রহ করে এই ট্যাবটি খোলা রাখুন। অন্য ট্যাবে গেলে কাজটি বন্ধ হয়ে যেতে পারে।
         </p>
         <div className="w-full max-w-xs bg-gray-200 dark:bg-gray-800 rounded-full h-3 mb-2 overflow-hidden">
           <div 

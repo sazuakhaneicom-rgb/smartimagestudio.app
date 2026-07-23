@@ -75,16 +75,6 @@ interface AppState {
   // Third Party APIs
   deepAiApiKey: string | null;
   setDeepAiApiKey: (key: string | null) => void;
-  replicateApiKey: string | null;
-  setReplicateApiKey: (key: string | null) => void;
-  photoroomApiKey: string | null;
-  setPhotoroomApiKey: (key: string | null) => void;
-  
-  // Processing Modes
-  bgRemoverMode: 'local' | 'cloud';
-  setBgRemoverMode: (mode: 'local' | 'cloud') => void;
-  upscalerMode: 'local' | 'cloud';
-  setUpscalerMode: (mode: 'local' | 'cloud') => void;
   
   // App Links
   appLinks: AppLinks;
@@ -184,16 +174,6 @@ export const useAppStore = create<AppState>()(
   // Third Party APIs
   deepAiApiKey: null,
   setDeepAiApiKey: (key) => set({ deepAiApiKey: key }),
-  replicateApiKey: null,
-  setReplicateApiKey: (key) => set({ replicateApiKey: key }),
-  photoroomApiKey: null,
-  setPhotoroomApiKey: (key) => set({ photoroomApiKey: key }),
-  
-  // Processing Modes
-  bgRemoverMode: 'local',
-  setBgRemoverMode: (mode) => set({ bgRemoverMode: mode }),
-  upscalerMode: 'local',
-  setUpscalerMode: (mode) => set({ upscalerMode: mode }),
   
   // App Links
   appLinks: defaultAppLinks,

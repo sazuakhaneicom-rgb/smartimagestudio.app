@@ -13,7 +13,7 @@ import { trackGeneration } from '@/lib/adminAnalytics';
 
 export default function BgRemoverView() {
   const { t } = useTranslation();
-  const { setAppMode, setImageToUpscale, imageToBgRemove, setImageToBgRemove, bgRemoverMode, setBgRemoverMode, photoroomApiKey, setSettingsOpen, siteSettings, addNotification } = useAppStore();
+  const { setAppMode, setImageToUpscale, imageToBgRemove, setImageToBgRemove, setSettingsOpen, siteSettings, addNotification } = useAppStore();
   const isMobile = useIsMobile();
   
   const [isDragging, setIsDragging] = useState(false);
@@ -44,65 +44,30 @@ export default function BgRemoverView() {
       setOriginalUrl(origUrl);
       setResultUrl(null);
 
-      if (bgRemoverMode === 'cloud') {
-        if (!photoroomApiKey) {
-          setErrorMsg('Ultra Quality ব্যবহারের জন্য সেটিংসে গিয়ে Photoroom API Key যুক্ত করুন।');
-          setIsProcessing(false);
-          setSettingsOpen(true);
-          return;
-        }
-
-        setProgress(30); // Fake progress for upload
-        
-        const formData = new FormData();
-        formData.append('image_file', fileOrBlob);
-        formData.append('format', 'png');
-
-        const response = await fetch('https://image-api.photoroom.com/v1/segment', {
-          method: 'POST',
-          headers: {
-            'x-api-key': photoroomApiKey,
-          },
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error('API Request Failed: ' + response.statusText);
-        }
-
-        const resultBlob = await response.blob();
-        setProgress(100);
-        
-        const resUrl = URL.createObjectURL(resultBlob);
-        setResultUrl(resUrl);
-        trackGeneration('bg_remover');
-      } else {
-        // Local Mode
-        let simulatedProgress: NodeJS.Timeout | null = null;
-        const config: Config = {
-          output: { format: 'image/png', quality: 1 },
-          progress: (key: string, current: number, total: number) => {
-            const downloadPercent = Math.round((current / total) * 75);
-            setProgress(prev => Math.max(prev, downloadPercent));
-            if (downloadPercent >= 75 && !simulatedProgress) {
-              simulatedProgress = setInterval(() => {
-                setProgress(p => (p < 98 ? p + 1 : p));
-              }, 150);
-            }
+      let simulatedProgress: NodeJS.Timeout | null = null;
+      const config: Config = {
+        output: { format: 'image/png', quality: 1 },
+        progress: (key: string, current: number, total: number) => {
+          const downloadPercent = Math.round((current / total) * 75);
+          setProgress(prev => Math.max(prev, downloadPercent));
+          if (downloadPercent >= 75 && !simulatedProgress) {
+            simulatedProgress = setInterval(() => {
+              setProgress(p => (p < 98 ? p + 1 : p));
+            }, 150);
           }
-        };
+        }
+      };
 
-        const resultBlob = await removeBackground(fileOrBlob, config);
-        if (simulatedProgress) clearInterval(simulatedProgress);
-        setProgress(100);
-        
-        const resUrl = URL.createObjectURL(resultBlob);
-        setResultUrl(resUrl);
-        trackGeneration('bg_remover');
-      }
+      const resultBlob = await removeBackground(fileOrBlob, config);
+      if (simulatedProgress) clearInterval(simulatedProgress);
+      setProgress(100);
+      
+      const resUrl = URL.createObjectURL(resultBlob);
+      setResultUrl(resUrl);
+      trackGeneration('bg_remover');
     } catch (error: any) {
       console.error('BG Removal Error:', error);
-      setErrorMsg('ব্যাকগ্রাউন্ড রিমুভ করতে সমস্যা হয়েছে। API Key সঠিক কি না চেক করুন, অথবা Local Mode ব্যবহার করুন।');
+      setErrorMsg('ব্যাকগ্রাউন্ড রিমুভ করতে সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।');
       setOriginalUrl(null);
     } finally {
       setIsProcessing(false);
@@ -279,7 +244,7 @@ export default function BgRemoverView() {
           ব্যাকগ্রাউন্ড রিমুভ হচ্ছে...
         </h2>
         <p className="text-gray-500 dark:text-gray-400 font-medium mb-6">
-          {bgRemoverMode === 'cloud' ? 'Cloud API দিয়ে প্রসেস হচ্ছে...' : 'AI ম্যাজিক কাজ করছে, দয়া করে অপেক্ষা করুন।'}
+          AI ম্যাজিক কাজ করছে, দয়া করে অপেক্ষা করুন।
         </p>
         <div className="w-full max-w-xs bg-gray-200 dark:bg-gray-800 rounded-full h-3 mb-2 overflow-hidden">
           <div 
