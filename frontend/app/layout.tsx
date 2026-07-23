@@ -3,6 +3,7 @@ import { Anek_Bangla, Outfit, Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 import ClientRefreshListener from '@/components/ClientRefreshListener';
+import PwaInstallBanner from '@/components/PwaInstallBanner';
 
 const anekBangla = Anek_Bangla({
   subsets: ['bengali', 'latin'],
@@ -58,6 +59,7 @@ export default function RootLayout({
       >
         <Providers>
           <ClientRefreshListener />
+          <PwaInstallBanner />
           {children}
         </Providers>
       </body>
