@@ -2,15 +2,40 @@
 
 import { useAppStore } from '@/store/useAppStore';
 import { useTranslation } from '@/lib/i18n';
-import { Layers, Settings } from 'lucide-react';
+import { Layers, Settings, Download } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import LanguageToggle from './LanguageToggle';
+import { useEffect, useState } from 'react';
 
 export default function Header() {
   const { t } = useTranslation();
   const { apiKeys, setSettingsOpen } = useAppStore();
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   const noApiKeys = apiKeys.length === 0;
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
+    }
+
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-4 py-4 sm:px-6">
@@ -24,7 +49,27 @@ export default function Header() {
           </span>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
+          {deferredPrompt && (
+            <button
+              onClick={handleInstall}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-sm font-bold rounded-lg shadow-md transition-all active:scale-95"
+            >
+              <Download className="w-4 h-4" />
+              ইনস্টল অ্যাপ
+            </button>
+          )}
+
+          {deferredPrompt && (
+            <button
+              onClick={handleInstall}
+              className="sm:hidden p-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md active:scale-95"
+              aria-label="Install App"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+          )}
+
           <LanguageToggle />
           <ThemeToggle />
           

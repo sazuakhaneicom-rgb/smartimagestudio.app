@@ -1,0 +1,21 @@
+{
+  "name": "Smart Image Studio",
+  "short_name": "SmartImage",
+  "description": "AI দিয়ে ইমেজের লেয়ার আলাদা করুন, ব্যাকগ্রাউন্ড রিমুভ করুন এবং আপস্কেল করুন",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8b5cf6",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

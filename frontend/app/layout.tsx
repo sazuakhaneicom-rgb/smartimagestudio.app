@@ -25,6 +25,13 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Smart Image Studio",
   description: "AI দিয়ে ইমেজের লেয়ার আলাদা করুন, ব্যাকগ্রাউন্ড রিমুভ করুন এবং আপস্কেল করুন",
+  manifest: "/manifest.json",
+  themeColor: "#8b5cf6",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "SmartImage",
+  },
   icons: {
     icon: [
       { url: '/logo.png' },

@@ -104,7 +104,7 @@ export default function UploadDropzone() {
 
   return (
     <div 
-      className={`relative w-full aspect-square sm:aspect-square max-w-[min(22rem,80vw)] sm:max-w-[min(28rem,60vh)] mx-auto rounded-[2.5rem] border-4 border-dashed transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] flex flex-col items-center justify-center p-6 sm:p-8 group cursor-pointer overflow-hidden shadow-2xl
+      className={`relative w-full aspect-auto min-h-[420px] sm:min-h-0 sm:aspect-square max-w-[min(24rem,90vw)] sm:max-w-[min(28rem,60vh)] mx-auto rounded-[2.5rem] border-4 border-dashed transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] flex flex-col items-center justify-center py-10 px-4 sm:p-8 group cursor-pointer overflow-hidden shadow-2xl
         ${isDragging 
           ? 'border-[#7C3AED] bg-[#7C3AED]/10 scale-[1.02] shadow-[0_0_80px_rgba(124,58,237,0.3)]' 
           : 'border-gray-300 dark:border-gray-700 bg-white/40 dark:bg-black/40 hover:border-[#7C3AED]/70 hover:bg-[#7C3AED]/5 hover:scale-[1.01] hover:shadow-[0_0_50px_rgba(124,58,237,0.15)]'
