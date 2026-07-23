@@ -10,7 +10,7 @@ import { useIsMobile } from '@/lib/device';
 import { trackGeneration } from '@/lib/adminAnalytics';
 
 export default function ImageToHdView() {
-  const { imageToUpscale, setImageToUpscale, setAppMode, setImageToBgRemove, deepAiApiKey, setSettingsOpen } = useAppStore();
+  const { imageToUpscale, setImageToUpscale, setAppMode, setImageToBgRemove, deepAiApiKey, setSettingsOpen, upscalerMode, setUpscalerMode, replicateApiKey } = useAppStore();
   const isMobile = useIsMobile();
   
   const [originalUrl, setOriginalUrl] = useState<string | null>(imageToUpscale || null);
@@ -43,136 +43,142 @@ export default function ImageToHdView() {
         img.onerror = reject;
       });
 
-      // Upscaler instance using esrgan-thick for extreme denoising and smoothing (vector-like)
-      const upscaler = new Upscaler({ model: esrganThick });
-      
-      // Prevent extreme freezing on huge images by capping input size to 1080px before 2x upscale
-      let sourceImage: HTMLImageElement | HTMLCanvasElement = img;
-      const MAX_DIMENSION = 1080;
-      if (img.width > MAX_DIMENSION || img.height > MAX_DIMENSION) {
-        const scale = MAX_DIMENSION / Math.max(img.width, img.height);
+      if (upscalerMode === 'cloud') {
+        if (!replicateApiKey) {
+          setErrorMsg('Ultra Quality (Face Restoration) ব্যবহারের জন্য সেটিংসে গিয়ে Replicate API Key যুক্ত করুন।');
+          setIsProcessing(false);
+          setSettingsOpen(true);
+          return;
+        }
+        
+        setProgress(10);
+        
+        // Convert image to base64 for Replicate API
         const canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
+        canvas.width = img.width;
+        canvas.height = img.height;
         const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          sourceImage = canvas;
-        }
-      }
-
-      const upscaledSrc = await upscaler.upscale(sourceImage, {
-        output: 'base64',
-        patchSize: isMobile ? 32 : 64, // Reduced patch size to prevent WebGL shader compilation errors on certain GPUs
-        padding: 2,
-        awaitNextFrame: true, // MANDATORY: Prevents browser freezing by yielding to the UI thread
-        progress: (percent) => {
-          setProgress(Math.round(percent * 100));
-        }
-      });
-
-      // --- Alpha Masking Logic to Preserve Transparency ---
-      const upscaledImg = new Image();
-      upscaledImg.src = upscaledSrc;
-      await new Promise((resolve, reject) => {
-        upscaledImg.onload = resolve;
-        upscaledImg.onerror = reject;
-      });
-
-      // Create a canvas for the final image
-      const canvas = document.createElement('canvas');
-      canvas.width = upscaledImg.width;
-      canvas.height = upscaledImg.height;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (!ctx) throw new Error("Canvas 2D context not available");
-
-      // Draw the AI upscaled image (which lost transparency)
-      ctx.drawImage(upscaledImg, 0, 0);
-      const upscaledData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-      // Create a canvas for the original image to scale it up (extracting the alpha mask)
-      const alphaCanvas = document.createElement('canvas');
-      alphaCanvas.width = canvas.width;
-      alphaCanvas.height = canvas.height;
-      const alphaCtx = alphaCanvas.getContext('2d', { willReadFrequently: true });
-      if (alphaCtx) {
-        // Draw original image scaled up
-        alphaCtx.drawImage(img, 0, 0, alphaCanvas.width, alphaCanvas.height);
-        const alphaData = alphaCtx.getImageData(0, 0, alphaCanvas.width, alphaCanvas.height);
-
-        // Apply original alpha channel to upscaled image
-        for (let i = 0; i < upscaledData.data.length; i += 4) {
-          upscaledData.data[i + 3] = alphaData.data[i + 3]; // Copy alpha
-        }
+        if (!ctx) throw new Error("Canvas context failed");
+        ctx.drawImage(img, 0, 0);
+        const base64Data = canvas.toDataURL('image/jpeg', 0.95);
         
-        // --- Professional Image Enhancement (Unsharp Mask & Micro-Contrast) ---
-        // Fast Laplacian edge detection to recover micro-textures and sharpness (Edge Enhancement)
-        const applyUnsharpMask = (imgData: ImageData, width: number, height: number, amount: number) => {
-          const data = imgData.data;
-          const copy = new Uint8ClampedArray(data);
-          const w = width;
-          const h = height;
-          for (let y = 1; y < h - 1; y++) {
-            for (let x = 1; x < w - 1; x++) {
-              const idx = (y * w + x) * 4;
-              for (let c = 0; c < 3; c++) {
-                const center = copy[idx + c];
-                const top = copy[idx - w * 4 + c];
-                const bottom = copy[idx + w * 4 + c];
-                const left = copy[idx - 4 + c];
-                const right = copy[idx + 4 + c];
-                const edge = (center * 4 - top - bottom - left - right);
-                data[idx + c] = Math.min(255, Math.max(0, center + edge * amount));
-              }
+        setProgress(20);
+        
+        // Call Replicate API (CodeFormer for Face Restoration & Enhance)
+        const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://api.replicate.com/v1/predictions');
+        const response = await fetch(proxyUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${replicateApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            version: "7de2ea26c616d5bf2245ad0d5e24f0ff9a6204578a5c876db53142edd9d2cd56",
+            input: {
+              image: base64Data,
+              upscale: 2,
+              face_upsample: true,
+              background_enhance: true,
+              codeformer_fidelity: 0.5
             }
-          }
-        };
+          })
+        });
 
-        // Apply Unsharp Mask (amount: 0.35 gives crisp professional sharpness without halos)
-        applyUnsharpMask(upscaledData, canvas.width, canvas.height, 0.35);
+        if (!response.ok) {
+          throw new Error('Replicate API Request Failed: ' + response.statusText);
+        }
 
-        // Put the sharp data back
-        ctx.putImageData(upscaledData, 0, 0);
+        let prediction = await response.json();
         
-        // --- Professional Color Grading & Lighting Recovery ---
-        const finalCtx = canvas.getContext('2d');
-        if (finalCtx) {
-          const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = canvas.width;
-          tempCanvas.height = canvas.height;
-          const tempCtx = tempCanvas.getContext('2d');
-          if (tempCtx) {
-            tempCtx.putImageData(upscaledData, 0, 0);
-            finalCtx.clearRect(0, 0, canvas.width, canvas.height);
-            // Advanced HDR-style grading: Vibrance, Contrast Optimization, Highlights & Shadow Recovery emulation
-            finalCtx.filter = 'contrast(1.12) saturate(1.18) brightness(1.03)';
-            finalCtx.drawImage(tempCanvas, 0, 0);
-            
-            // Soft Light blend pass for localized micro-contrast and rich skin tones
-            finalCtx.globalCompositeOperation = 'soft-light';
-            finalCtx.globalAlpha = 0.15;
-            finalCtx.drawImage(tempCanvas, 0, 0);
-            
-            // Reset state
-            finalCtx.globalCompositeOperation = 'source-over';
-            finalCtx.globalAlpha = 1.0;
+        // Poll for result
+        let pollCount = 0;
+        while (prediction.status !== "succeeded" && prediction.status !== "failed") {
+          await new Promise(r => setTimeout(r, 1500));
+          pollCount++;
+          setProgress(Math.min(95, 20 + pollCount * 5));
+          
+          const pollUrl = 'https://corsproxy.io/?' + encodeURIComponent(prediction.urls.get);
+          const poll = await fetch(pollUrl, {
+            headers: { 'Authorization': `Token ${replicateApiKey}` }
+          });
+          prediction = await poll.json();
+        }
+        
+        if (prediction.status === 'failed') {
+          throw new Error('Prediction failed');
+        }
+        
+        setProgress(100);
+        setResultUrl(prediction.output); // Replicate returns a URL
+        trackGeneration('image_hd_cloud');
+      } else {
+        // --- Local Offline Upscaler (ESRGAN) ---
+        // Upscaler instance using esrgan-thick for extreme denoising and smoothing (vector-like)
+        const upscaler = new Upscaler({ model: esrganThick });
+        
+        // Prevent extreme freezing on huge images by capping input size to 1080px before 2x upscale
+        let sourceImage: HTMLImageElement | HTMLCanvasElement = img;
+        const MAX_DIMENSION = 1080;
+        if (img.width > MAX_DIMENSION || img.height > MAX_DIMENSION) {
+          const scale = MAX_DIMENSION / Math.max(img.width, img.height);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            sourceImage = canvas;
           }
         }
-      } else {
-        // If no transparency, we still need to apply the professional pipeline
-        const imgElement = new Image();
-        imgElement.src = upscaledSrc;
-        await new Promise((resolve) => { imgElement.onload = resolve; });
-        
-        canvas.width = imgElement.width;
-        canvas.height = imgElement.height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(imgElement, 0, 0);
-          const rawData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        const upscaledSrc = await upscaler.upscale(sourceImage, {
+          output: 'base64',
+          patchSize: isMobile ? 32 : 64, // Reduced patch size to prevent WebGL shader compilation errors on certain GPUs
+          padding: 2,
+          awaitNextFrame: true, // MANDATORY: Prevents browser freezing by yielding to the UI thread
+          progress: (percent) => {
+            setProgress(Math.round(percent * 100));
+          }
+        });
+
+        // --- Alpha Masking Logic to Preserve Transparency ---
+        const upscaledImg = new Image();
+        upscaledImg.src = upscaledSrc;
+        await new Promise((resolve, reject) => {
+          upscaledImg.onload = resolve;
+          upscaledImg.onerror = reject;
+        });
+
+        // Create a canvas for the final image
+        const canvas = document.createElement('canvas');
+        canvas.width = upscaledImg.width;
+        canvas.height = upscaledImg.height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (!ctx) throw new Error("Canvas 2D context not available");
+
+        // Draw the AI upscaled image (which lost transparency)
+        ctx.drawImage(upscaledImg, 0, 0);
+        const upscaledData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        // Create a canvas for the original image to scale it up (extracting the alpha mask)
+        const alphaCanvas = document.createElement('canvas');
+        alphaCanvas.width = canvas.width;
+        alphaCanvas.height = canvas.height;
+        const alphaCtx = alphaCanvas.getContext('2d', { willReadFrequently: true });
+        if (alphaCtx) {
+          // Draw original image scaled up
+          alphaCtx.drawImage(img, 0, 0, alphaCanvas.width, alphaCanvas.height);
+          const alphaData = alphaCtx.getImageData(0, 0, alphaCanvas.width, alphaCanvas.height);
+
+          // Apply original alpha channel to upscaled image
+          for (let i = 0; i < upscaledData.data.length; i += 4) {
+            upscaledData.data[i + 3] = alphaData.data[i + 3]; // Copy alpha
+          }
           
+          // --- Professional Image Enhancement (Unsharp Mask & Micro-Contrast) ---
+          // Fast Laplacian edge detection to recover micro-textures and sharpness (Edge Enhancement)
           const applyUnsharpMask = (imgData: ImageData, width: number, height: number, amount: number) => {
             const data = imgData.data;
             const copy = new Uint8ClampedArray(data);
@@ -183,47 +189,111 @@ export default function ImageToHdView() {
                 const idx = (y * w + x) * 4;
                 for (let c = 0; c < 3; c++) {
                   const center = copy[idx + c];
-                  const edge = (center * 4 - copy[idx - w * 4 + c] - copy[idx + w * 4 + c] - copy[idx - 4 + c] - copy[idx + 4 + c]);
+                  const top = copy[idx - w * 4 + c];
+                  const bottom = copy[idx + w * 4 + c];
+                  const left = copy[idx - 4 + c];
+                  const right = copy[idx + 4 + c];
+                  const edge = (center * 4 - top - bottom - left - right);
                   data[idx + c] = Math.min(255, Math.max(0, center + edge * amount));
                 }
               }
             }
           };
+
+          // Apply Unsharp Mask (amount: 0.35 gives crisp professional sharpness without halos)
+          applyUnsharpMask(upscaledData, canvas.width, canvas.height, 0.35);
+
+          // Put the sharp data back
+          ctx.putImageData(upscaledData, 0, 0);
           
-          applyUnsharpMask(rawData, canvas.width, canvas.height, 0.35);
-          ctx.putImageData(rawData, 0, 0);
+          // --- Professional Color Grading & Lighting Recovery ---
+          const finalCtx = canvas.getContext('2d');
+          if (finalCtx) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            if (tempCtx) {
+              tempCtx.putImageData(upscaledData, 0, 0);
+              finalCtx.clearRect(0, 0, canvas.width, canvas.height);
+              // Advanced HDR-style grading: Vibrance, Contrast Optimization, Highlights & Shadow Recovery emulation
+              finalCtx.filter = 'contrast(1.12) saturate(1.18) brightness(1.03)';
+              finalCtx.drawImage(tempCanvas, 0, 0);
+              
+              // Soft Light blend pass for localized micro-contrast and rich skin tones
+              finalCtx.globalCompositeOperation = 'soft-light';
+              finalCtx.globalAlpha = 0.15;
+              finalCtx.drawImage(tempCanvas, 0, 0);
+              
+              // Reset state
+              finalCtx.globalCompositeOperation = 'source-over';
+              finalCtx.globalAlpha = 1.0;
+            }
+          }
+        } else {
+          // If no transparency, we still need to apply the professional pipeline
+          const imgElement = new Image();
+          imgElement.src = upscaledSrc;
+          await new Promise((resolve) => { imgElement.onload = resolve; });
           
-          const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = canvas.width;
-          tempCanvas.height = canvas.height;
-          const tempCtx = tempCanvas.getContext('2d');
-          if (tempCtx) {
-            tempCtx.putImageData(rawData, 0, 0);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.filter = 'contrast(1.12) saturate(1.18) brightness(1.03)';
-            ctx.drawImage(tempCanvas, 0, 0);
+          canvas.width = imgElement.width;
+          canvas.height = imgElement.height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(imgElement, 0, 0);
+            const rawData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             
-            ctx.globalCompositeOperation = 'soft-light';
-            ctx.globalAlpha = 0.15;
-            ctx.drawImage(tempCanvas, 0, 0);
+            const applyUnsharpMask = (imgData: ImageData, width: number, height: number, amount: number) => {
+              const data = imgData.data;
+              const copy = new Uint8ClampedArray(data);
+              const w = width;
+              const h = height;
+              for (let y = 1; y < h - 1; y++) {
+                for (let x = 1; x < w - 1; x++) {
+                  const idx = (y * w + x) * 4;
+                  for (let c = 0; c < 3; c++) {
+                    const center = copy[idx + c];
+                    const edge = (center * 4 - copy[idx - w * 4 + c] - copy[idx + w * 4 + c] - copy[idx - 4 + c] - copy[idx + 4 + c]);
+                    data[idx + c] = Math.min(255, Math.max(0, center + edge * amount));
+                  }
+                }
+              }
+            };
             
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.globalAlpha = 1.0;
+            applyUnsharpMask(rawData, canvas.width, canvas.height, 0.35);
+            ctx.putImageData(rawData, 0, 0);
+            
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            if (tempCtx) {
+              tempCtx.putImageData(rawData, 0, 0);
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+              ctx.filter = 'contrast(1.12) saturate(1.18) brightness(1.03)';
+              ctx.drawImage(tempCanvas, 0, 0);
+              
+              ctx.globalCompositeOperation = 'soft-light';
+              ctx.globalAlpha = 0.15;
+              ctx.drawImage(tempCanvas, 0, 0);
+              
+              ctx.globalCompositeOperation = 'source-over';
+              ctx.globalAlpha = 1.0;
+            }
           }
         }
+
+        const finalUrl = canvas.toDataURL('image/png');
+        setResultUrl(finalUrl);
+        trackGeneration('image_hd_local');
+        // Clean up upscaler memory
+        upscaler.dispose();
       }
 
-      const finalUrl = canvas.toDataURL('image/png');
-      // --------------------------------------------------
-
-      setResultUrl(finalUrl);
-      trackGeneration('image_hd');
-      // Clean up upscaler memory
-      upscaler.dispose();
 
     } catch (err: any) {
       console.error('Upscale error:', err);
-      setErrorMsg('HD করতে সমস্যা হয়েছে। মডেল লোড হতে ব্যর্থ বা মেমরি ফুল হয়ে গেছে।');
+      setErrorMsg('HD করতে সমস্যা হয়েছে। API Key সঠিক কি না চেক করুন, অথবা Local Mode ব্যবহার করুন।');
     } finally {
       setIsProcessing(false);
     }
@@ -332,7 +402,9 @@ export default function ImageToHdView() {
           ছবি HD করা হচ্ছে...
         </h2>
         <p className="text-amber-600 dark:text-amber-400 font-bold mb-6 text-center max-w-md bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
-          ⚠️ ব্রাউজার ক্রাশ রোধ করতে অনুগ্রহ করে এই ট্যাবটি খোলা রাখুন। অন্য ট্যাবে গেলে কাজটি বন্ধ হয়ে যেতে পারে।
+          {upscalerMode === 'cloud' 
+            ? 'Cloud AI দিয়ে ফেস রিস্টোর করা হচ্ছে, দয়া করে অপেক্ষা করুন...' 
+            : '⚠️ ব্রাউজার ক্রাশ রোধ করতে অনুগ্রহ করে এই ট্যাবটি খোলা রাখুন। অন্য ট্যাবে গেলে কাজটি বন্ধ হয়ে যেতে পারে।'}
         </p>
         <div className="w-full max-w-xs bg-gray-200 dark:bg-gray-800 rounded-full h-3 mb-2 overflow-hidden">
           <div 
@@ -513,9 +585,38 @@ export default function ImageToHdView() {
           HD করার জন্য ছবি দিন
         </h3>
         
-        <p className="relative z-10 text-lg font-bold text-indigo-500 group-hover:text-indigo-400 mb-10 text-center cursor-pointer transition-colors duration-500">
+        <p className="relative z-10 text-lg font-bold text-indigo-500 group-hover:text-indigo-400 mb-6 text-center cursor-pointer transition-colors duration-500">
           ব্রাউজ করতে ক্লিক করুন
         </p>
+
+        {/* Mode Toggle */}
+        <div className="relative z-20 flex items-center justify-center gap-2 mb-8 bg-white/80 dark:bg-gray-900/80 p-1.5 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 backdrop-blur-md" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={() => setUpscalerMode('local')}
+            className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
+              upscalerMode === 'local' 
+                ? 'bg-indigo-500 text-white shadow-md' 
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Fast Mode (Free)
+          </button>
+          <button
+            onClick={() => {
+              setUpscalerMode('cloud');
+              if (!replicateApiKey) {
+                setSettingsOpen(true);
+              }
+            }}
+            className={`px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-1 transition-all ${
+              upscalerMode === 'cloud' 
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md' 
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <Sparkles size={14} /> Ultra Quality (Face Restorer)
+          </button>
+        </div>
 
         <div className="relative z-10 flex flex-col items-center gap-2 text-sm text-gray-500 dark:text-gray-400 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md px-6 py-4 rounded-2xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 text-center w-full max-w-[240px] group-hover:shadow-md transition-shadow">
           <div className="flex items-center gap-2 font-bold text-gray-700 dark:text-gray-300">

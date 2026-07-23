@@ -13,7 +13,7 @@ import { trackGeneration } from '@/lib/adminAnalytics';
 
 export default function BgRemoverView() {
   const { t } = useTranslation();
-  const { setAppMode, setImageToUpscale, imageToBgRemove, setImageToBgRemove } = useAppStore();
+  const { setAppMode, setImageToUpscale, imageToBgRemove, setImageToBgRemove, bgRemoverMode, setBgRemoverMode, photoroomApiKey, setSettingsOpen } = useAppStore();
   const isMobile = useIsMobile();
   
   const [isDragging, setIsDragging] = useState(false);
@@ -43,37 +43,66 @@ export default function BgRemoverView() {
       const origUrl = URL.createObjectURL(fileOrBlob);
       setOriginalUrl(origUrl);
       setResultUrl(null);
-      
-      let simulatedProgress: NodeJS.Timeout | null = null;
 
-      const config: Config = {
-        // Removed 'model: isnet_quint8' to use the default HIGH QUALITY (isnet_fp16) model
-        output: { format: 'image/png', quality: 1 },
-        progress: (key: string, current: number, total: number) => {
-          // Download progress takes up to 75%
-          const downloadPercent = Math.round((current / total) * 75);
-          setProgress(prev => Math.max(prev, downloadPercent));
-          
-          // Once download is near complete, start fake progress for the actual AI processing time
-          if (downloadPercent >= 75 && !simulatedProgress) {
-            simulatedProgress = setInterval(() => {
-              setProgress(p => (p < 98 ? p + 1 : p));
-            }, 150);
-          }
+      if (bgRemoverMode === 'cloud') {
+        if (!photoroomApiKey) {
+          setErrorMsg('Ultra Quality ব্যবহারের জন্য সেটিংসে গিয়ে Photoroom API Key যুক্ত করুন।');
+          setIsProcessing(false);
+          setSettingsOpen(true);
+          return;
         }
-      };
 
-      const resultBlob = await removeBackground(fileOrBlob, config);
-      if (simulatedProgress) clearInterval(simulatedProgress);
-      setProgress(100);
-      
-      const resUrl = URL.createObjectURL(resultBlob);
-      setResultUrl(resUrl);
-      trackGeneration('bg_remover');
-      
+        setProgress(30); // Fake progress for upload
+        
+        const formData = new FormData();
+        formData.append('image_file', fileOrBlob);
+        formData.append('format', 'png');
+
+        const response = await fetch('https://image-api.photoroom.com/v1/segment', {
+          method: 'POST',
+          headers: {
+            'x-api-key': photoroomApiKey,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('API Request Failed: ' + response.statusText);
+        }
+
+        const resultBlob = await response.blob();
+        setProgress(100);
+        
+        const resUrl = URL.createObjectURL(resultBlob);
+        setResultUrl(resUrl);
+        trackGeneration('bg_remover_cloud');
+      } else {
+        // Local Mode
+        let simulatedProgress: NodeJS.Timeout | null = null;
+        const config: Config = {
+          output: { format: 'image/png', quality: 1 },
+          progress: (key: string, current: number, total: number) => {
+            const downloadPercent = Math.round((current / total) * 75);
+            setProgress(prev => Math.max(prev, downloadPercent));
+            if (downloadPercent >= 75 && !simulatedProgress) {
+              simulatedProgress = setInterval(() => {
+                setProgress(p => (p < 98 ? p + 1 : p));
+              }, 150);
+            }
+          }
+        };
+
+        const resultBlob = await removeBackground(fileOrBlob, config);
+        if (simulatedProgress) clearInterval(simulatedProgress);
+        setProgress(100);
+        
+        const resUrl = URL.createObjectURL(resultBlob);
+        setResultUrl(resUrl);
+        trackGeneration('bg_remover_local');
+      }
     } catch (error: any) {
       console.error('BG Removal Error:', error);
-      setErrorMsg('ব্যাকগ্রাউন্ড রিমুভ করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
+      setErrorMsg('ব্যাকগ্রাউন্ড রিমুভ করতে সমস্যা হয়েছে। API Key সঠিক কি না চেক করুন, অথবা Local Mode ব্যবহার করুন।');
       setOriginalUrl(null);
     } finally {
       setIsProcessing(false);
@@ -249,7 +278,7 @@ export default function BgRemoverView() {
           ব্যাকগ্রাউন্ড রিমুভ হচ্ছে...
         </h2>
         <p className="text-gray-500 dark:text-gray-400 font-medium mb-6">
-          AI ম্যাজিক কাজ করছে, দয়া করে অপেক্ষা করুন।
+          {bgRemoverMode === 'cloud' ? 'Cloud API দিয়ে প্রসেস হচ্ছে...' : 'AI ম্যাজিক কাজ করছে, দয়া করে অপেক্ষা করুন।'}
         </p>
         <div className="w-full max-w-xs bg-gray-200 dark:bg-gray-800 rounded-full h-3 mb-2 overflow-hidden">
           <div 
@@ -465,9 +494,38 @@ export default function BgRemoverView() {
           ছবি আপলোড করুন
         </h3>
         
-        <p className="relative z-10 text-lg font-bold text-pink-500 group-hover:text-pink-400 mb-10 text-center cursor-pointer transition-colors duration-500">
+        <p className="relative z-10 text-lg font-bold text-pink-500 group-hover:text-pink-400 mb-6 text-center cursor-pointer transition-colors duration-500">
           ব্রাউজ করতে ক্লিক করুন
         </p>
+
+        {/* Mode Toggle */}
+        <div className="relative z-20 flex items-center justify-center gap-2 mb-8 bg-white/80 dark:bg-gray-900/80 p-1.5 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 backdrop-blur-md" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={() => setBgRemoverMode('local')}
+            className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
+              bgRemoverMode === 'local' 
+                ? 'bg-pink-500 text-white shadow-md' 
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Fast Mode (Free)
+          </button>
+          <button
+            onClick={() => {
+              setBgRemoverMode('cloud');
+              if (!photoroomApiKey) {
+                setSettingsOpen(true);
+              }
+            }}
+            className={`px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-1 transition-all ${
+              bgRemoverMode === 'cloud' 
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md' 
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <Sparkles size={14} /> Ultra Quality
+          </button>
+        </div>
 
         <div className="relative z-10 flex flex-col items-center gap-2 text-sm text-gray-500 dark:text-gray-400 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md px-6 py-4 rounded-2xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 text-center w-full max-w-[240px] group-hover:shadow-md transition-shadow">
           <div className="flex items-center gap-2 font-bold text-gray-700 dark:text-gray-300">
