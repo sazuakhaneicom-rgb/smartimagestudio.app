@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import { listenToAppLinks } from '@/lib/adminAnalytics';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
-  const { theme, locale, setTheme, setLocale } = useAppStore();
+  const { theme, locale, setTheme, setLocale, setAppLinks } = useAppStore();
 
   useEffect(() => {
     // Rehydrate state from localStorage on mount if needed, 
@@ -46,6 +47,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
     document.documentElement.lang = locale;
     localStorage.setItem('locale', locale);
   }, [locale, mounted]);
+
+  // Listen for dynamic external API Links from Admin Panel
+  useEffect(() => {
+    if (!mounted) return;
+    const unsub = listenToAppLinks((links) => {
+      setAppLinks(links);
+    });
+    return () => unsub();
+  }, [mounted, setAppLinks]);
 
   // Prevent hydration mismatch rendering
   if (!mounted) {

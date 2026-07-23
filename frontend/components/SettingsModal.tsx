@@ -16,6 +16,7 @@ export default function SettingsModal() {
   const setReplicateApiKey = useAppStore((state) => state.setReplicateApiKey);
   const photoroomApiKey = useAppStore((state) => state.photoroomApiKey);
   const setPhotoroomApiKey = useAppStore((state) => state.setPhotoroomApiKey);
+  const appLinks = useAppStore((state) => state.appLinks);
   
   const [newKey, setNewKey] = useState('');
 
@@ -93,12 +94,13 @@ export default function SettingsModal() {
               <p className="opacity-90 leading-relaxed text-xs">
                 মডেলের রেট লিমিট এড়াতে আপনি ৪টি পর্যন্ত API কী যোগ করতে পারেন। সিস্টেম স্বয়ংক্রিয়ভাবে একটি কী লিমিট শেষ হলে অন্যটিতে সুইচ করবে। <br/>
                 <a 
-                  href="https://aistudio.google.com/app/apikey" 
+                  href={appLinks.geminiUrl || "https://aistudio.google.com/app/apikey"}
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="font-semibold underline hover:text-blue-600 dark:hover:text-blue-400 mt-1 inline-block"
+                  className="font-semibold underline hover:text-blue-600 dark:hover:text-blue-400 mt-1 inline-flex items-center gap-1"
                 >
-                  নতুন API কী পান
+                  <ExternalLink size={12} />
+                  এখানে ক্লিক করে API কী তৈরি করুন
                 </a>
               </p>
             </div>
@@ -118,8 +120,17 @@ export default function SettingsModal() {
                   value={replicateApiKey || ''}
                   onChange={(e) => setReplicateApiKey(e.target.value || null)}
                   placeholder="r8_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all mb-1"
                 />
+                <a 
+                  href={appLinks.replicateUrl || "https://replicate.com/account/api-tokens"}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 w-fit"
+                >
+                  <ExternalLink size={10} />
+                  এখানে ক্লিক করে Replicate API Key তৈরি করুন
+                </a>
               </div>
 
               <div>
@@ -129,8 +140,17 @@ export default function SettingsModal() {
                   value={photoroomApiKey || ''}
                   onChange={(e) => setPhotoroomApiKey(e.target.value || null)}
                   placeholder="xxxxxxxxxxxxxxxxxxxxxx"
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all mb-1"
                 />
+                <a 
+                  href={appLinks.photoroomUrl || "https://www.photoroom.com/api"}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[11px] font-semibold text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1 w-fit"
+                >
+                  <ExternalLink size={10} />
+                  এখানে ক্লিক করে Photoroom API Key তৈরি করুন
+                </a>
               </div>
             </div>
           </div>

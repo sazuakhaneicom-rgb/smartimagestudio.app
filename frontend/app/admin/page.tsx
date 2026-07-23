@@ -13,6 +13,11 @@ import {
   listenToFeatureFlags,
   FeatureFlags,
   defaultFeatureFlags,
+  AppLinks,
+  defaultAppLinks,
+  getAppLinks,
+  saveAppLinks,
+  listenToAppLinks,
   getActiveSessions,
   blockSession,
   UserSession
@@ -40,7 +45,8 @@ import {
   X,
   Smartphone,
   Monitor,
-  Ban
+  Ban,
+  Link
 } from 'lucide-react';
 
 const FEATURE_NAMES: Record<keyof FeatureFlags, { name: string; icon: React.ReactNode; color: string }> = {
@@ -78,7 +84,9 @@ export default function AdminPage() {
   });
 
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags>(defaultFeatureFlags);
+  const [appLinks, setAppLinks] = useState<AppLinks>(defaultAppLinks);
   const [isSavingFlags, setIsSavingFlags] = useState(false);
+  const [isSavingLinks, setIsSavingLinks] = useState(false);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -116,6 +124,8 @@ export default function AdminPage() {
       if (!hasUnsavedChangesRef.current) {
         setFeatureFlags(flags);
       }
+      const links = await getAppLinks();
+      setAppLinks(links);
     };
 
     fetchMetrics();
@@ -128,10 +138,15 @@ export default function AdminPage() {
         setFeatureFlags(flags);
       }
     });
+    
+    const unsubLinks = listenToAppLinks((links) => {
+      setAppLinks(links);
+    });
 
     return () => {
       clearInterval(interval);
       unsubFlags();
+      unsubLinks();
     };
   }, [isAuthenticated]);
 
@@ -174,6 +189,20 @@ export default function AdminPage() {
     } else {
       setActionError('❌ ফায়ারবেস পারমিশন এরর: আপনার Firebase Database Rules সেট করা নেই। রুলস আপডেট না করলে ডাটা লাইভ ওয়েবসাইটে সেভ হবে না!');
       setTimeout(() => setActionError(null), 10000);
+    }
+  };
+  
+  const handleSaveAppLinks = async () => {
+    setIsSavingLinks(true);
+    const success = await saveAppLinks(appLinks);
+    setIsSavingLinks(false);
+
+    if (success) {
+      setActionSuccess('🔗 API লিংকগুলো সফলভাবে আপডেট করা হয়েছে!');
+      setTimeout(() => setActionSuccess(null), 5000);
+    } else {
+      setActionError('❌ লিংক আপডেট ব্যর্থ হয়েছে।');
+      setTimeout(() => setActionError(null), 5000);
     }
   };
 
@@ -552,6 +581,60 @@ export default function AdminPage() {
               <span className="text-3xl font-black text-white font-mono">{metrics.breakdown.text_extractor}</span>
             </div>
 
+          </div>
+        </div>
+        
+        {/* API External Links Management */}
+        <div className="bg-[#140D21]/80 backdrop-blur-xl border border-blue-500/30 p-6 rounded-3xl shadow-2xl space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-blue-500/10 pb-4">
+            <div>
+              <h2 className="text-xl font-black text-white flex items-center gap-2">
+                <Link className="w-6 h-6 text-blue-400" />
+                API তৈরি করার লিংক ম্যানেজমেন্ট
+              </h2>
+              <p className="text-xs text-gray-400 font-medium mt-1">
+                এখান থেকে লিংক আপডেট করলে ইউজারদের Settings মডালে নতুন লিংক শো করবে।
+              </p>
+            </div>
+
+            <button 
+              onClick={handleSaveAppLinks}
+              disabled={isSavingLinks}
+              className={`px-6 py-3 font-extrabold text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 shrink-0 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 text-white shadow-blue-500/25 hover:scale-105 active:scale-95`}
+            >
+              <Save className={`w-4 h-4 ${isSavingLinks ? 'animate-spin' : ''}`} />
+              {isSavingLinks ? 'সেভ হচ্ছে...' : '💾 লিংক সেভ করুন'}
+            </button>
+          </div>
+
+          <div className="space-y-4 max-w-3xl">
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Gemini API Link</label>
+              <input 
+                type="url" 
+                value={appLinks.geminiUrl}
+                onChange={(e) => setAppLinks({ ...appLinks, geminiUrl: e.target.value })}
+                className="w-full bg-[#0F0A1A] border border-blue-500/30 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all font-mono text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Replicate API Link (Ultra HD)</label>
+              <input 
+                type="url" 
+                value={appLinks.replicateUrl}
+                onChange={(e) => setAppLinks({ ...appLinks, replicateUrl: e.target.value })}
+                className="w-full bg-[#0F0A1A] border border-blue-500/30 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all font-mono text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Photoroom API Link (Background Remover)</label>
+              <input 
+                type="url" 
+                value={appLinks.photoroomUrl}
+                onChange={(e) => setAppLinks({ ...appLinks, photoroomUrl: e.target.value })}
+                className="w-full bg-[#0F0A1A] border border-blue-500/30 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all font-mono text-sm"
+              />
+            </div>
           </div>
         </div>
 

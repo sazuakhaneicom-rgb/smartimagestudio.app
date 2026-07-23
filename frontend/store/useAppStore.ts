@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { AppLinks, defaultAppLinks } from '@/lib/adminAnalytics';
 
 export type ProcessingStep = 'idle' | 'uploading' | 'analyzing' | 'separating' | 'inpainting' | 'done' | 'error';
 export type LayerType = 'background' | 'object' | 'text' | 'clean_bg';
@@ -84,6 +85,10 @@ interface AppState {
   setBgRemoverMode: (mode: 'local' | 'cloud') => void;
   upscalerMode: 'local' | 'cloud';
   setUpscalerMode: (mode: 'local' | 'cloud') => void;
+  
+  // App Links
+  appLinks: AppLinks;
+  setAppLinks: (links: AppLinks) => void;
   
   // Settings Modal
   isSettingsOpen: boolean;
@@ -185,6 +190,10 @@ export const useAppStore = create<AppState>()(
   setBgRemoverMode: (mode) => set({ bgRemoverMode: mode }),
   upscalerMode: 'local',
   setUpscalerMode: (mode) => set({ upscalerMode: mode }),
+  
+  // App Links
+  appLinks: defaultAppLinks,
+  setAppLinks: (links) => set({ appLinks: links }),
   
   // Settings Modal
   isSettingsOpen: false,

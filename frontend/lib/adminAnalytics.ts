@@ -447,3 +447,100 @@ export const listenToFeatureFlags = (onChange: (flags: FeatureFlags) => void) =>
     if (bc) bc.close();
   };
 };
+
+// --- App Links (Dynamic API Creation Links) ---
+
+export interface AppLinks {
+  geminiUrl: string;
+  replicateUrl: string;
+  photoroomUrl: string;
+}
+
+export const defaultAppLinks: AppLinks = {
+  geminiUrl: "https://aistudio.google.com/app/apikey",
+  replicateUrl: "https://replicate.com/account/api-tokens",
+  photoroomUrl: "https://www.photoroom.com/api"
+};
+
+const APP_LINKS_KEY = "smart_image_app_links";
+
+export const getAppLinks = async (): Promise<AppLinks> => {
+  if (typeof window === 'undefined') return defaultAppLinks;
+
+  let localLinks: AppLinks | null = null;
+  try {
+    const raw = localStorage.getItem(APP_LINKS_KEY);
+    if (raw) localLinks = JSON.parse(raw);
+  } catch (e) {}
+
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/system/appLinks.json?t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data !== null && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length > 0) {
+        const merged = { ...defaultAppLinks, ...data };
+        localStorage.setItem(APP_LINKS_KEY, JSON.stringify(merged));
+        return merged;
+      }
+    }
+  } catch (e) {}
+
+  return localLinks ? { ...defaultAppLinks, ...localLinks } : defaultAppLinks;
+};
+
+export const saveAppLinks = async (links: AppLinks): Promise<boolean> => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(APP_LINKS_KEY, JSON.stringify(links));
+    if ('BroadcastChannel' in window) {
+      try {
+        const bc = new BroadcastChannel('smart_studio_links');
+        bc.postMessage({ type: 'APP_LINKS_UPDATED', links });
+        bc.close();
+      } catch (e) {}
+    }
+  }
+
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/system/appLinks.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(links)
+    });
+    return res.ok;
+  } catch (e) {
+    return false;
+  }
+};
+
+export const listenToAppLinks = (onChange: (links: AppLinks) => void) => {
+  if (typeof window === 'undefined') return () => {};
+
+  let isMounted = true;
+
+  const check = async () => {
+    const links = await getAppLinks();
+    if (isMounted) onChange(links);
+  };
+
+  check();
+  // Poll every 3 seconds for instant updates
+  const interval = setInterval(check, 3000);
+
+  let bc: BroadcastChannel | null = null;
+  if ('BroadcastChannel' in window) {
+    try {
+      bc = new BroadcastChannel('smart_studio_links');
+      bc.onmessage = (msg) => {
+        if (msg.data?.type === 'APP_LINKS_UPDATED') {
+          onChange(msg.data.links);
+        }
+      };
+    } catch (e) {}
+  }
+
+  return () => {
+    isMounted = false;
+    clearInterval(interval);
+    if (bc) bc.close();
+  };
+};
