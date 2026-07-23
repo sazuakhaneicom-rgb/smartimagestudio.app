@@ -464,34 +464,6 @@ export default function BgRemoverView() {
           ব্রাউজ করতে ক্লিক করুন
         </p>
 
-        {/* Mode Toggle */}
-        <div className="relative z-20 flex items-center justify-center gap-2 mb-8 bg-white/80 dark:bg-gray-900/80 p-1.5 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 backdrop-blur-md" onClick={e => e.stopPropagation()}>
-          <button
-            onClick={() => setBgRemoverMode('local')}
-            className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
-              bgRemoverMode === 'local' 
-                ? 'bg-pink-500 text-white shadow-md' 
-                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            Fast Mode (Free)
-          </button>
-          <button
-            onClick={() => {
-              setBgRemoverMode('cloud');
-              if (!photoroomApiKey) {
-                setSettingsOpen(true);
-              }
-            }}
-            className={`px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-1 transition-all ${
-              bgRemoverMode === 'cloud' 
-                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md' 
-                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            <Sparkles size={14} /> Ultra Quality
-          </button>
-        </div>
 
         <div className="relative z-10 flex flex-col items-center gap-2 text-sm text-gray-500 dark:text-gray-400 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md px-6 py-4 rounded-2xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 text-center w-full max-w-[240px] group-hover:shadow-md transition-shadow">
           <div className="flex items-center gap-2 font-bold text-gray-700 dark:text-gray-300">
