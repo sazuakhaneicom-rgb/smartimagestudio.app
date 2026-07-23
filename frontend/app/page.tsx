@@ -2,17 +2,30 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useTranslation } from '@/lib/i18n';
 import { useAppStore } from '@/store/useAppStore';
 import Header from '@/components/Header';
-import UploadDropzone from '@/components/UploadDropzone';
-import BgRemoverView from '@/components/BgRemoverView';
-import ImageToHdView from '@/components/ImageToHdView';
-import LogoBwView from '@/components/LogoBwView';
-import PhotoResizerView from '@/components/PhotoResizerView';
-import ImageTranslatorView from '@/components/ImageTranslatorView';
 import { listenToFeatureFlags, FeatureFlags, defaultFeatureFlags } from '@/lib/adminAnalytics';
 import { X, Loader2, CheckCircle, AlertCircle, Info, Scissors, Sparkles, ScanLine, Shapes, Crop, Languages } from 'lucide-react';
+
+const ViewLoader = () => (
+  <div className="w-full flex flex-col items-center justify-center p-12 min-h-[40vh] animate-in fade-in duration-500">
+    <div className="relative w-16 h-16 flex items-center justify-center">
+      <div className="absolute inset-0 rounded-full border-2 border-gray-100 dark:border-gray-800" />
+      <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-purple-500 animate-spin" />
+      <Loader2 className="w-6 h-6 text-purple-500 animate-pulse" />
+    </div>
+    <p className="mt-4 text-sm font-medium text-gray-500 dark:text-gray-400">লোড হচ্ছে...</p>
+  </div>
+);
+
+const UploadDropzone = dynamic(() => import('@/components/UploadDropzone'), { ssr: false, loading: () => <ViewLoader /> });
+const BgRemoverView = dynamic(() => import('@/components/BgRemoverView'), { ssr: false, loading: () => <ViewLoader /> });
+const ImageToHdView = dynamic(() => import('@/components/ImageToHdView'), { ssr: false, loading: () => <ViewLoader /> });
+const LogoBwView = dynamic(() => import('@/components/LogoBwView'), { ssr: false, loading: () => <ViewLoader /> });
+const PhotoResizerView = dynamic(() => import('@/components/PhotoResizerView'), { ssr: false, loading: () => <ViewLoader /> });
+const ImageTranslatorView = dynamic(() => import('@/components/ImageTranslatorView'), { ssr: false, loading: () => <ViewLoader /> });
 
 import SettingsModal from '@/components/SettingsModal';
 
@@ -187,14 +200,10 @@ export default function Home() {
   return (
     <div className="min-h-[100dvh] lg:h-full flex flex-col transition-colors duration-500 relative font-sans">
       
-      {/* Premium Animated Background (Mesh Gradient / Glowing Orbs) */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] rounded-full bg-purple-500/20 dark:bg-purple-900/20 blur-[120px] mix-blend-screen dark:mix-blend-lighten animate-float" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-500/20 dark:bg-indigo-900/20 blur-[100px] mix-blend-screen dark:mix-blend-lighten animate-float-delayed" />
-        <div className="absolute top-[30%] left-[30%] w-[40vw] h-[40vw] rounded-full bg-pink-500/10 dark:bg-pink-900/10 blur-[150px] mix-blend-screen dark:mix-blend-lighten animate-pulse-slow" />
-        
-        {/* Noise overlay for texture */}
-        <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")' }}></div>
+      {/* Optimized Premium Background (Lightweight) */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/50 dark:from-indigo-950 dark:via-gray-950 dark:to-purple-950">
+        <div className="absolute top-0 left-0 w-[500px] h-[500px] rounded-full bg-purple-500/10 dark:bg-purple-800/10 blur-[80px] -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] rounded-full bg-indigo-500/10 dark:bg-indigo-800/10 blur-[100px] translate-x-1/3 translate-y-1/3" />
       </div>
 
       <div className="relative z-10 flex flex-col h-full">
