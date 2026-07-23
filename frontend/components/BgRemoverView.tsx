@@ -75,7 +75,7 @@ export default function BgRemoverView() {
         
         const resUrl = URL.createObjectURL(resultBlob);
         setResultUrl(resUrl);
-        trackGeneration('bg_remover_cloud');
+        trackGeneration('bg_remover');
       } else {
         // Local Mode
         let simulatedProgress: NodeJS.Timeout | null = null;
@@ -98,7 +98,7 @@ export default function BgRemoverView() {
         
         const resUrl = URL.createObjectURL(resultBlob);
         setResultUrl(resUrl);
-        trackGeneration('bg_remover_local');
+        trackGeneration('bg_remover');
       }
     } catch (error: any) {
       console.error('BG Removal Error:', error);

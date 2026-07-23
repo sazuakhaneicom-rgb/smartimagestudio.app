@@ -110,7 +110,7 @@ export default function ImageToHdView() {
         
         setProgress(100);
         setResultUrl(prediction.output); // Replicate returns a URL
-        trackGeneration('image_hd_cloud');
+        trackGeneration('image_hd');
       } else {
         // --- Local Offline Upscaler (ESRGAN) ---
         // Upscaler instance using esrgan-thick for extreme denoising and smoothing (vector-like)
@@ -285,7 +285,7 @@ export default function ImageToHdView() {
 
         const finalUrl = canvas.toDataURL('image/png');
         setResultUrl(finalUrl);
-        trackGeneration('image_hd_local');
+        trackGeneration('image_hd');
         // Clean up upscaler memory
         upscaler.dispose();
       }
