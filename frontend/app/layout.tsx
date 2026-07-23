@@ -1,27 +1,8 @@
 import type { Metadata } from 'next';
-import { Anek_Bangla, Outfit, Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 import ClientRefreshListener from '@/components/ClientRefreshListener';
 import PwaInstallBanner from '@/components/PwaInstallBanner';
-
-const anekBangla = Anek_Bangla({
-  subsets: ['bengali', 'latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-bangla',
-});
-
-const outfit = Outfit({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-heading-en',
-});
-
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-body-en',
-});
 
 export const viewport = {
   themeColor: "#8b5cf6",
@@ -54,6 +35,9 @@ export default function RootLayout({
   return (
     <html lang="bn" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -67,7 +51,7 @@ export default function RootLayout({
         />
       </head>
       <body 
-        className={`${anekBangla.variable} ${outfit.variable} ${inter.variable} min-h-[100dvh] lg:h-[100dvh] overflow-x-hidden lg:overflow-hidden bg-background text-text-primary font-sans transition-colors`}
+        className="font-sans-fallback min-h-[100dvh] lg:h-[100dvh] overflow-x-hidden lg:overflow-hidden bg-background text-text-primary font-sans transition-colors"
         data-lang="bn"
       >
         <Providers>

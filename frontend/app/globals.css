@@ -53,8 +53,8 @@
   --text-primary-color: #0f172a;
   --text-secondary-color: #64748b;
   
-  --app-font-heading: var(--font-bangla), sans-serif;
-  --app-font-body: var(--font-bangla), sans-serif;
+  --app-font-heading: 'Anek Bangla', sans-serif;
+  --app-font-body: 'Anek Bangla', sans-serif;
 }
 
 .dark {
@@ -75,13 +75,13 @@ body {
 
 /* Font language mapping */
 [data-lang="en"] {
-  --app-font-heading: var(--font-heading-en), sans-serif;
-  --app-font-body: var(--font-body-en), sans-serif;
+  --app-font-heading: 'Outfit', sans-serif;
+  --app-font-body: 'Inter', sans-serif;
 }
 
 [data-lang="bn"] {
-  --app-font-heading: var(--font-bangla), sans-serif;
-  --app-font-body: var(--font-bangla), sans-serif;
+  --app-font-heading: 'Anek Bangla', sans-serif;
+  --app-font-body: 'Anek Bangla', sans-serif;
 }
 
 [data-lang="bn"] body,
@@ -89,7 +89,7 @@ body {
 [data-lang="bn"] h4, [data-lang="bn"] h5, [data-lang="bn"] h6,
 [data-lang="bn"] p, [data-lang="bn"] span, [data-lang="bn"] a, 
 [data-lang="bn"] div, [data-lang="bn"] button, [data-lang="bn"] input {
-  font-family: var(--font-bangla), sans-serif !important;
+  font-family: 'Anek Bangla', sans-serif !important;
 }
 
 h1, h2, h3, h4, h5, h6 {
