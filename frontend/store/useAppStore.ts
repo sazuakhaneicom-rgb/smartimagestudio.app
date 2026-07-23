@@ -214,11 +214,7 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => ({
         apiKeys: state.apiKeys,
         activeKeyIndex: state.activeKeyIndex,
-        deepAiApiKey: state.deepAiApiKey,
-        replicateApiKey: state.replicateApiKey,
-        photoroomApiKey: state.photoroomApiKey,
-        bgRemoverMode: state.bgRemoverMode,
-        upscalerMode: state.upscalerMode
+        deepAiApiKey: state.deepAiApiKey
       }),
     }
   )
