@@ -19,6 +19,10 @@ export default function Header() {
       navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
     }
 
+    if ((window as any).deferredPwaPrompt) {
+      setDeferredPrompt((window as any).deferredPwaPrompt);
+    }
+
     const handler = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);

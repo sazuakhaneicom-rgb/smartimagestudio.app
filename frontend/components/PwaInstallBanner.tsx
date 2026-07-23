@@ -11,6 +11,12 @@ export default function PwaInstallBanner() {
     // Check if user previously dismissed it
     const isDismissed = localStorage.getItem('pwa_banner_dismissed');
     
+    // Check if event already fired and was caught by head script
+    if ((window as any).deferredPwaPrompt) {
+      setDeferredPrompt((window as any).deferredPwaPrompt);
+      if (!isDismissed) setShowBanner(true);
+    }
+    
     const handler = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);

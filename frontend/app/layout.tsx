@@ -53,6 +53,19 @@ export default function RootLayout({
 }) {
   return (
     <html lang="bn" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.deferredPwaPrompt = null;
+              window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                window.deferredPwaPrompt = e;
+              });
+            `,
+          }}
+        />
+      </head>
       <body 
         className={`${anekBangla.variable} ${outfit.variable} ${inter.variable} min-h-[100dvh] lg:h-[100dvh] overflow-x-hidden lg:overflow-hidden bg-background text-text-primary font-sans transition-colors`}
         data-lang="bn"
