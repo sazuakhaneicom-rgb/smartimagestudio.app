@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 
 export default function Header() {
   const { t } = useTranslation();
-  const { apiKeys, setSettingsOpen } = useAppStore();
+  const { apiKeys, setSettingsOpen, siteSettings } = useAppStore();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   const noApiKeys = apiKeys.length === 0;
@@ -49,7 +49,7 @@ export default function Header() {
             <img src="/logo.png" alt="Smart Image Studio Logo" className="w-8 h-8 rounded-lg object-cover" />
           </div>
           <span className="font-bold text-xl tracking-tight hidden sm:block bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary)] to-purple-600 dark:from-purple-400 dark:to-purple-200">
-            {t('app.name')}
+            {siteSettings?.appName || t('app.name')}
           </span>
         </div>
 

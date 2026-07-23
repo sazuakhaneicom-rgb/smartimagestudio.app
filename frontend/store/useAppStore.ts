@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { AppLinks, defaultAppLinks } from '@/lib/adminAnalytics';
+import { AppLinks, defaultAppLinks, GlobalSiteSettings, defaultSiteSettings } from '@/lib/adminAnalytics';
 
 export type ProcessingStep = 'idle' | 'uploading' | 'analyzing' | 'separating' | 'inpainting' | 'done' | 'error';
 export type LayerType = 'background' | 'object' | 'text' | 'clean_bg';
@@ -89,6 +89,10 @@ interface AppState {
   // App Links
   appLinks: AppLinks;
   setAppLinks: (links: AppLinks) => void;
+  
+  // Site Settings
+  siteSettings: GlobalSiteSettings;
+  setSiteSettings: (settings: GlobalSiteSettings) => void;
   
   // Settings Modal
   isSettingsOpen: boolean;
@@ -194,6 +198,10 @@ export const useAppStore = create<AppState>()(
   // App Links
   appLinks: defaultAppLinks,
   setAppLinks: (links) => set({ appLinks: links }),
+  
+  // Site Settings
+  siteSettings: defaultSiteSettings,
+  setSiteSettings: (settings) => set({ siteSettings: settings }),
   
   // Settings Modal
   isSettingsOpen: false,

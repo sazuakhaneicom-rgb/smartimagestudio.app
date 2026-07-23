@@ -3,6 +3,8 @@ import './globals.css';
 import { Providers } from '@/components/Providers';
 import ClientRefreshListener from '@/components/ClientRefreshListener';
 import PwaInstallBanner from '@/components/PwaInstallBanner';
+import AnnouncementBanner from '@/components/AnnouncementBanner';
+import MaintenanceWrapper from '@/components/MaintenanceWrapper';
 
 export const viewport = {
   themeColor: "#8b5cf6",
@@ -57,7 +59,10 @@ export default function RootLayout({
         <Providers>
           <ClientRefreshListener />
           <PwaInstallBanner />
-          {children}
+          <AnnouncementBanner />
+          <MaintenanceWrapper>
+            {children}
+          </MaintenanceWrapper>
         </Providers>
       </body>
     </html>

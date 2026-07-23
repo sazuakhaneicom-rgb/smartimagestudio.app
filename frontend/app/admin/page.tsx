@@ -18,6 +18,11 @@ import {
   getAppLinks,
   saveAppLinks,
   listenToAppLinks,
+  GlobalSiteSettings,
+  defaultSiteSettings,
+  getSiteSettings,
+  saveSiteSettings,
+  listenToSiteSettings,
   getActiveSessions,
   blockSession,
   UserSession
@@ -46,7 +51,9 @@ import {
   Smartphone,
   Monitor,
   Ban,
-  Link
+  Link,
+  Settings,
+  AlertCircle
 } from 'lucide-react';
 
 const FEATURE_NAMES: Record<keyof FeatureFlags, { name: string; icon: React.ReactNode; color: string }> = {
@@ -85,8 +92,10 @@ export default function AdminPage() {
 
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags>(defaultFeatureFlags);
   const [appLinks, setAppLinks] = useState<AppLinks>(defaultAppLinks);
+  const [siteSettings, setSiteSettings] = useState<GlobalSiteSettings>(defaultSiteSettings);
   const [isSavingFlags, setIsSavingFlags] = useState(false);
   const [isSavingLinks, setIsSavingLinks] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -126,6 +135,8 @@ export default function AdminPage() {
       }
       const links = await getAppLinks();
       setAppLinks(links);
+      const settings = await getSiteSettings();
+      setSiteSettings(settings);
     };
 
     fetchMetrics();
@@ -142,11 +153,16 @@ export default function AdminPage() {
     const unsubLinks = listenToAppLinks((links) => {
       setAppLinks(links);
     });
+    
+    const unsubSettings = listenToSiteSettings((settings) => {
+      setSiteSettings(settings);
+    });
 
     return () => {
       clearInterval(interval);
       unsubFlags();
       unsubLinks();
+      unsubSettings();
     };
   }, [isAuthenticated]);
 
@@ -202,6 +218,20 @@ export default function AdminPage() {
       setTimeout(() => setActionSuccess(null), 5000);
     } else {
       setActionError('❌ লিংক আপডেট ব্যর্থ হয়েছে।');
+      setTimeout(() => setActionError(null), 5000);
+    }
+  };
+
+  const handleSaveSiteSettings = async () => {
+    setIsSavingSettings(true);
+    const success = await saveSiteSettings(siteSettings);
+    setIsSavingSettings(false);
+
+    if (success) {
+      setActionSuccess('⚙️ গ্লোবাল সাইট সেটিংস সফলভাবে আপডেট করা হয়েছে!');
+      setTimeout(() => setActionSuccess(null), 5000);
+    } else {
+      setActionError('❌ সেটিংস আপডেট ব্যর্থ হয়েছে।');
       setTimeout(() => setActionError(null), 5000);
     }
   };
@@ -634,6 +664,112 @@ export default function AdminPage() {
                 onChange={(e) => setAppLinks({ ...appLinks, photoroomUrl: e.target.value })}
                 className="w-full bg-[#0F0A1A] border border-blue-500/30 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all font-mono text-sm"
               />
+            </div>
+          </div>
+        </div>
+        
+        {/* Global Site Settings & Maintenance */}
+        <div className="bg-[#140D21]/80 backdrop-blur-xl border border-amber-500/30 p-6 rounded-3xl shadow-2xl space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-amber-500/10 pb-4">
+            <div>
+              <h2 className="text-xl font-black text-white flex items-center gap-2">
+                <Settings className="w-6 h-6 text-amber-400" />
+                গ্লোবাল সাইট কনফিগারেশন (Global Config)
+              </h2>
+              <p className="text-xs text-gray-400 font-medium mt-1">
+                এখান থেকে ওয়েবসাইটের নাম, নোটিশ এবং মেইনটেন্যান্স মোড কন্ট্রোল করুন।
+              </p>
+            </div>
+
+            <button 
+              onClick={handleSaveSiteSettings}
+              disabled={isSavingSettings}
+              className={`px-6 py-3 font-extrabold text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 shrink-0 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white shadow-amber-500/25 hover:scale-105 active:scale-95`}
+            >
+              <Save className={`w-4 h-4 ${isSavingSettings ? 'animate-spin' : ''}`} />
+              {isSavingSettings ? 'সেভ হচ্ছে...' : '💾 কনফিগারেশন সেভ করুন'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Branding Settings */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ওয়েবসাইটের নাম (App Name)</label>
+                <input 
+                  type="text" 
+                  value={siteSettings.appName}
+                  onChange={(e) => setSiteSettings({ ...siteSettings, appName: e.target.value })}
+                  className="w-full bg-[#0F0A1A] border border-amber-500/30 rounded-xl px-4 py-3 text-white focus:border-amber-500 outline-none transition-all text-sm font-bold"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ট্যাগলাইন (Tagline)</label>
+                <input 
+                  type="text" 
+                  value={siteSettings.tagline}
+                  onChange={(e) => setSiteSettings({ ...siteSettings, tagline: e.target.value })}
+                  className="w-full bg-[#0F0A1A] border border-amber-500/30 rounded-xl px-4 py-3 text-white focus:border-amber-500 outline-none transition-all text-sm font-bold"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">সর্বোচ্চ আপলোড সাইজ (MB)</label>
+                <input 
+                  type="number" 
+                  value={siteSettings.maxUploadSizeMB}
+                  onChange={(e) => setSiteSettings({ ...siteSettings, maxUploadSizeMB: Number(e.target.value) })}
+                  className="w-full bg-[#0F0A1A] border border-amber-500/30 rounded-xl px-4 py-3 text-white focus:border-amber-500 outline-none transition-all text-sm font-bold"
+                />
+              </div>
+            </div>
+
+            {/* Maintenance & Announcement */}
+            <div className="space-y-4">
+              <div className="p-4 bg-red-900/10 border border-red-500/30 rounded-2xl">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <label className="block text-sm font-black text-red-400 uppercase tracking-wider">Maintenance Mode</label>
+                    <span className="text-[10px] text-gray-400 font-bold">চালু করলে ইউজাররা ওয়েবসাইট ব্যবহার করতে পারবে না</span>
+                  </div>
+                  <div 
+                    onClick={() => setSiteSettings({ ...siteSettings, maintenanceMode: !siteSettings.maintenanceMode })}
+                    className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors duration-300 flex items-center ${siteSettings.maintenanceMode ? 'bg-red-500 justify-end' : 'bg-gray-700 justify-start'}`}
+                  >
+                    <div className="w-4 h-4 rounded-full bg-white shadow-md" />
+                  </div>
+                </div>
+                <input 
+                  type="text" 
+                  value={siteSettings.maintenanceMessage}
+                  onChange={(e) => setSiteSettings({ ...siteSettings, maintenanceMessage: e.target.value })}
+                  placeholder="মেইনটেন্যান্স মেসেজ লিখুন..."
+                  className="w-full bg-black/40 border border-red-500/20 rounded-xl px-3 py-2 text-white focus:border-red-500 outline-none transition-all text-xs font-bold"
+                />
+              </div>
+
+              <div className="p-4 bg-purple-900/10 border border-purple-500/30 rounded-2xl">
+                <label className="block text-sm font-black text-purple-400 uppercase tracking-wider mb-1 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" /> গ্লোবাল নোটিশ ব্যানার
+                </label>
+                <span className="text-[10px] text-gray-400 font-bold block mb-3">ফাঁকা রাখলে কোনো ব্যানার শো করবে না</span>
+                
+                <div className="space-y-2">
+                  <input 
+                    type="text" 
+                    value={siteSettings.announcementText}
+                    onChange={(e) => setSiteSettings({ ...siteSettings, announcementText: e.target.value })}
+                    placeholder="নোটিশ টেক্সট লিখুন..."
+                    className="w-full bg-black/40 border border-purple-500/20 rounded-xl px-3 py-2 text-white focus:border-purple-500 outline-none transition-all text-xs font-bold"
+                  />
+                  <input 
+                    type="url" 
+                    value={siteSettings.announcementLink}
+                    onChange={(e) => setSiteSettings({ ...siteSettings, announcementLink: e.target.value })}
+                    placeholder="বিস্তারিত লিংকের URL (ঐচ্ছিক)"
+                    className="w-full bg-black/40 border border-purple-500/20 rounded-xl px-3 py-2 text-white focus:border-purple-500 outline-none transition-all text-xs font-bold"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

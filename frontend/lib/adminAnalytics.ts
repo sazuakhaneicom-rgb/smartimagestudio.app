@@ -450,6 +450,108 @@ export const listenToFeatureFlags = (onChange: (flags: FeatureFlags) => void) =>
 
 // --- App Links (Dynamic API Creation Links) ---
 
+export interface GlobalSiteSettings {
+  appName: string;
+  tagline: string;
+  maxUploadSizeMB: number;
+  maintenanceMode: boolean;
+  maintenanceMessage: string;
+  announcementText: string;
+  announcementLink: string;
+}
+
+export const defaultSiteSettings: GlobalSiteSettings = {
+  appName: "স্মার্ট ইমেজ স্টুডিও",
+  tagline: "AI দিয়ে ছবির সব কাজ এক জায়গায়",
+  maxUploadSizeMB: 15,
+  maintenanceMode: false,
+  maintenanceMessage: "আমাদের সিস্টেমে বর্তমানে আপডেট চলছে। দয়া করে কিছুক্ষণ পর আবার চেষ্টা করুন।",
+  announcementText: "",
+  announcementLink: ""
+};
+
+const SITE_SETTINGS_KEY = "smart_image_site_settings";
+
+export const getSiteSettings = async (): Promise<GlobalSiteSettings> => {
+  if (typeof window === 'undefined') return defaultSiteSettings;
+
+  let localSettings: GlobalSiteSettings | null = null;
+  try {
+    const raw = localStorage.getItem(SITE_SETTINGS_KEY);
+    if (raw) localSettings = JSON.parse(raw);
+  } catch (e) {}
+
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/system/siteSettings.json?t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data !== null && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length > 0) {
+        const merged = { ...defaultSiteSettings, ...data };
+        localStorage.setItem(SITE_SETTINGS_KEY, JSON.stringify(merged));
+        return merged;
+      }
+    }
+  } catch (e) {}
+
+  return localSettings ? { ...defaultSiteSettings, ...localSettings } : defaultSiteSettings;
+};
+
+export const saveSiteSettings = async (settings: GlobalSiteSettings): Promise<boolean> => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(SITE_SETTINGS_KEY, JSON.stringify(settings));
+    if ('BroadcastChannel' in window) {
+      try {
+        const bc = new BroadcastChannel('smart_studio_settings');
+        bc.postMessage({ type: 'SITE_SETTINGS_UPDATED', settings });
+        bc.close();
+      } catch (e) {}
+    }
+  }
+
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/system/siteSettings.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    });
+    return res.ok;
+  } catch (e) {
+    return false;
+  }
+};
+
+export const listenToSiteSettings = (onChange: (settings: GlobalSiteSettings) => void) => {
+  if (typeof window === 'undefined') return () => {};
+
+  let isMounted = true;
+
+  const check = async () => {
+    const settings = await getSiteSettings();
+    if (isMounted) onChange(settings);
+  };
+
+  check();
+  const interval = setInterval(check, 3000);
+
+  let bc: BroadcastChannel | null = null;
+  if ('BroadcastChannel' in window) {
+    try {
+      bc = new BroadcastChannel('smart_studio_settings');
+      bc.onmessage = (msg) => {
+        if (msg.data?.type === 'SITE_SETTINGS_UPDATED') {
+          onChange(msg.data.settings);
+        }
+      };
+    } catch (e) {}
+  }
+
+  return () => {
+    isMounted = false;
+    clearInterval(interval);
+    if (bc) bc.close();
+  };
+};
+
 export interface AppLinks {
   geminiUrl: string;
   replicateUrl: string;

@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { listenToAppLinks } from '@/lib/adminAnalytics';
+import { listenToAppLinks, listenToSiteSettings } from '@/lib/adminAnalytics';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
-  const { theme, locale, setTheme, setLocale, setAppLinks } = useAppStore();
+  const { theme, locale, setTheme, setLocale, setAppLinks, setSiteSettings } = useAppStore();
 
   useEffect(() => {
     // Rehydrate state from localStorage on mount if needed, 
@@ -56,6 +56,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
     });
     return () => unsub();
   }, [mounted, setAppLinks]);
+
+  // Listen for Global Site Settings from Admin Panel
+  useEffect(() => {
+    if (!mounted) return;
+    const unsub = listenToSiteSettings((settings) => {
+      setSiteSettings(settings);
+    });
+    return () => unsub();
+  }, [mounted, setSiteSettings]);
 
   // Prevent hydration mismatch rendering
   if (!mounted) {

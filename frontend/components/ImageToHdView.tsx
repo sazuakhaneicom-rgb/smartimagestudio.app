@@ -10,7 +10,7 @@ import { useIsMobile } from '@/lib/device';
 import { trackGeneration } from '@/lib/adminAnalytics';
 
 export default function ImageToHdView() {
-  const { imageToUpscale, setImageToUpscale, setAppMode, setImageToBgRemove, deepAiApiKey, setSettingsOpen, upscalerMode, setUpscalerMode, replicateApiKey } = useAppStore();
+  const { imageToUpscale, setImageToUpscale, setAppMode, setImageToBgRemove, deepAiApiKey, setSettingsOpen, upscalerMode, setUpscalerMode, replicateApiKey, siteSettings } = useAppStore();
   const isMobile = useIsMobile();
   
   const [originalUrl, setOriginalUrl] = useState<string | null>(imageToUpscale || null);
@@ -305,8 +305,9 @@ export default function ImageToHdView() {
       setErrorMsg('সাপোর্টেড ফরম্যাট নয় (শুধুমাত্র JPG/PNG/WEBP)');
       return;
     }
-    if (file.size > 15 * 1024 * 1024) {
-      setErrorMsg('ফাইল সাইজ ১৫ MB এর বেশি হওয়া যাবে না');
+    const maxSize = (siteSettings?.maxUploadSizeMB || 15) * 1024 * 1024;
+    if (file.size > maxSize) {
+      setErrorMsg(`ফাইল সাইজ ${siteSettings?.maxUploadSizeMB || 15} MB এর বেশি হওয়া যাবে না`);
       return;
     }
     const url = URL.createObjectURL(file);

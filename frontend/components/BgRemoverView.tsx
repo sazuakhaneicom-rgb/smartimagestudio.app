@@ -13,7 +13,7 @@ import { trackGeneration } from '@/lib/adminAnalytics';
 
 export default function BgRemoverView() {
   const { t } = useTranslation();
-  const { setAppMode, setImageToUpscale, imageToBgRemove, setImageToBgRemove, bgRemoverMode, setBgRemoverMode, photoroomApiKey, setSettingsOpen } = useAppStore();
+  const { setAppMode, setImageToUpscale, imageToBgRemove, setImageToBgRemove, bgRemoverMode, setBgRemoverMode, photoroomApiKey, setSettingsOpen, siteSettings, addNotification } = useAppStore();
   const isMobile = useIsMobile();
   
   const [isDragging, setIsDragging] = useState(false);
@@ -115,8 +115,9 @@ export default function BgRemoverView() {
       setErrorMsg('সাপোর্টেড ফরম্যাট নয় (শুধুমাত্র JPG/PNG/WEBP)');
       return;
     }
-    if (file.size > 15 * 1024 * 1024) {
-      setErrorMsg('ফাইল সাইজ ১৫ MB এর বেশি হওয়া যাবে না');
+    const maxSize = (siteSettings?.maxUploadSizeMB || 15) * 1024 * 1024;
+    if (file.size > maxSize) {
+      setErrorMsg(`ফাইল সাইজ ${siteSettings?.maxUploadSizeMB || 15} MB এর বেশি হওয়া যাবে না`);
       return;
     }
     processImage(file);

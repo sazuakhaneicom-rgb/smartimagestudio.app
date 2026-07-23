@@ -21,8 +21,9 @@ export default function UploadDropzone() {
       return;
     }
 
-    if (file.size > 15 * 1024 * 1024) {
-      addNotification({ type: 'error', message: t('errors.tooLarge'), autoDismiss: true });
+    const maxSize = (siteSettings?.maxUploadSizeMB || 15) * 1024 * 1024;
+    if (file.size > maxSize) {
+      addNotification({ type: 'error', message: t('errors.tooLarge').replace('15', String(siteSettings?.maxUploadSizeMB || 15)), autoDismiss: true });
       return;
     }
 
@@ -63,7 +64,7 @@ export default function UploadDropzone() {
       }
     };
     reader.readAsDataURL(file);
-  }, [addNotification, setCurrentView, setOriginalImage, setProcessingStep, setLayers, t]);
+  }, [addNotification, setCurrentView, setOriginalImage, setProcessingStep, setLayers, t, siteSettings]);
 
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
@@ -159,7 +160,7 @@ export default function UploadDropzone() {
           <ImageIcon className="w-5 h-5 text-[#7C3AED]" />
           <span>{t('upload.formats')}</span>
         </div>
-        <span className="opacity-80 font-medium">{t('upload.maxSize')}</span>
+        <span className="opacity-80 font-medium text-xs">সর্বোচ্চ সাইজ: {siteSettings?.maxUploadSizeMB || 15} MB</span>
         <span className="text-xs text-[#7C3AED] dark:text-[#A78BFA] font-bold mt-1">📋 অথবা Ctrl + V চেপে ছবি পেস্ট করুন</span>
       </div>
     </div>

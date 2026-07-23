@@ -121,7 +121,7 @@ async function getResizedBase64(dataUrl: string, maxWidth = 1600): Promise<strin
 }
 
 export default function ImageTranslatorView() {
-  const { apiKeys, activeKeyIndex } = useAppStore();
+  const { apiKeys, activeKeyIndex, siteSettings } = useAppStore();
 
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -158,8 +158,9 @@ export default function ImageTranslatorView() {
       setErrorMsg('শুধুমাত্র JPG, PNG, WEBP ফরম্যাট সাপোর্টেড');
       return;
     }
-    if (file.size > 15 * 1024 * 1024) {
-      setErrorMsg('ফাইল সাইজ ১৫ MB এর বেশি হওয়া যাবে না');
+    const maxSize = (siteSettings?.maxUploadSizeMB || 15) * 1024 * 1024;
+    if (file.size > maxSize) {
+      setErrorMsg(`ফাইল সাইজ ${siteSettings?.maxUploadSizeMB || 15} MB এর বেশি হওয়া যাবে না`);
       return;
     }
     const reader = new FileReader();
