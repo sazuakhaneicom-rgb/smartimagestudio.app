@@ -47,8 +47,8 @@ export default function PwaInstallBanner() {
   if (!showBanner || !deferredPrompt) return null;
 
   return (
-    <div className="fixed top-24 left-4 right-4 sm:left-auto sm:right-6 sm:w-[26rem] z-[100] animate-in slide-in-from-top-10 fade-in duration-500">
-      <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-2 border-purple-200 dark:border-purple-800/50 p-4 rounded-2xl shadow-2xl flex flex-col gap-3 relative overflow-hidden">
+    <div className="fixed top-24 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] sm:w-[28rem] z-[100] animate-in slide-in-from-top-10 fade-in duration-500">
+      <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-2 border-purple-200 dark:border-purple-800/50 p-5 rounded-3xl shadow-2xl flex flex-col gap-3 relative overflow-hidden">
         
         {/* Glow Effect */}
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-purple-500/20 blur-[30px] rounded-full pointer-events-none" />
