@@ -253,36 +253,22 @@ export default function StudioMakerView() {
     setAiDress(index);
     if (!originalImage) return;
     
-    setIsProcessing(true);
-    setProgress(10);
+    // TODO: Connect to a real AI Virtual Try-On API (e.g., Replicate, Fal.ai)
+    // For now, this just selects the dress style visually.
+    // When a real backend is connected, uncomment the processing logic below:
     
-    try {
-      let simProg = setInterval(() => setProgress(p => Math.min(p + 15, 90)), 500);
-      
-      const response = await fetch('/api/try-on', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          image: originalImage, 
-          dressId: index,
-          instructions: aiInstructions
-        })
-      });
-      
-      await response.json();
-      
-      clearInterval(simProg);
-      setProgress(100);
-      
-      setTimeout(() => {
-        setIsProcessing(false);
-      }, 500);
-      
-    } catch (error) {
-      console.error(error);
-      setIsProcessing(false);
-      alert('AI Try-on failed.');
-    }
+    // setIsProcessing(true);
+    // setProgress(10);
+    // try {
+    //   const simProg = setInterval(() => setProgress(p => Math.min(p + 15, 90)), 500);
+    //   const response = await fetch('YOUR_AI_API_ENDPOINT', { ... });
+    //   clearInterval(simProg);
+    //   setProgress(100);
+    //   setTimeout(() => setIsProcessing(false), 500);
+    // } catch (error) {
+    //   console.error(error);
+    //   setIsProcessing(false);
+    // }
   };
 
   const processAutoRemoveBg = async () => {
