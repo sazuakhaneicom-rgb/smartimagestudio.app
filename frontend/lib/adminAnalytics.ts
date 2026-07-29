@@ -347,6 +347,7 @@ export interface FeatureFlags {
   layer_extractor: boolean;
   text_extractor: boolean;
   offline_scanner: boolean;
+  studio_maker: boolean;
 }
 
 export const defaultFeatureFlags: FeatureFlags = {
@@ -356,7 +357,8 @@ export const defaultFeatureFlags: FeatureFlags = {
   photo_resizer: true,
   layer_extractor: true,
   text_extractor: true,
-  offline_scanner: true
+  offline_scanner: true,
+  studio_maker: true
 };
 
 const FEATURE_FLAGS_KEY = "smart_image_feature_flags";

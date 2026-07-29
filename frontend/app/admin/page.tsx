@@ -53,7 +53,8 @@ import {
   Ban,
   Link,
   Settings,
-  AlertCircle
+  AlertCircle,
+  Camera
 } from 'lucide-react';
 
 const FEATURE_NAMES: Record<keyof FeatureFlags, { name: string; icon: React.ReactNode; color: string }> = {
@@ -63,7 +64,8 @@ const FEATURE_NAMES: Record<keyof FeatureFlags, { name: string; icon: React.Reac
   photo_resizer: { name: 'ফটো রিসাইজার (Photo Resizer)', icon: <Crop className="w-5 h-5" />, color: 'text-emerald-400' },
   layer_extractor: { name: 'লেয়ার এক্সট্রাক্টর (Layer Extractor)', icon: <Shapes className="w-5 h-5" />, color: 'text-purple-400' },
   text_extractor: { name: 'ইমেজ স্ক্যানার (Main Toggle)', icon: <ScanLine className="w-5 h-5" />, color: 'text-blue-400' },
-  offline_scanner: { name: 'ফ্রি অফলাইন স্ক্যানার (Offline OCR)', icon: <ScanLine className="w-5 h-5" />, color: 'text-emerald-500' }
+  offline_scanner: { name: 'ফ্রি অফলাইন স্ক্যানার (Offline OCR)', icon: <ScanLine className="w-5 h-5" />, color: 'text-emerald-500' },
+  studio_maker: { name: 'স্টুডিও মেকার (Studio Maker)', icon: <Camera className="w-5 h-5" />, color: 'text-orange-400' }
 };
 
 export default function AdminPage() {

@@ -165,7 +165,8 @@ export default function Home() {
       'image-upscaler': 'image_hd',
       'logo-bw': 'logo_bw',
       'layer-extractor': 'layer_extractor',
-      'photo-resizer': 'photo_resizer'
+      'photo-resizer': 'photo_resizer',
+      'studio-maker': 'studio_maker'
     };
 
     const currentFlagKey = modeFlagMap[appMode];
@@ -339,7 +340,7 @@ export default function Home() {
                 )}
 
                 {/* Studio Maker (Always visible for testing) */}
-                {true && (
+                {flags.studio_maker && (
                   <button
                     onClick={() => {
                       setAppMode('studio-maker');
