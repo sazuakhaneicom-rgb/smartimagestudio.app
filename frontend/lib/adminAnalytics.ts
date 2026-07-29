@@ -458,6 +458,7 @@ export interface GlobalSiteSettings {
   maintenanceMessage: string;
   announcementText: string;
   announcementLink: string;
+  studioMakerEnabled: boolean;
 }
 
 export const defaultSiteSettings: GlobalSiteSettings = {
@@ -467,7 +468,8 @@ export const defaultSiteSettings: GlobalSiteSettings = {
   maintenanceMode: false,
   maintenanceMessage: "আমাদের সিস্টেমে বর্তমানে আপডেট চলছে। দয়া করে কিছুক্ষণ পর আবার চেষ্টা করুন।",
   announcementText: "",
-  announcementLink: ""
+  announcementLink: "",
+  studioMakerEnabled: true
 };
 
 const SITE_SETTINGS_KEY = "smart_image_site_settings";

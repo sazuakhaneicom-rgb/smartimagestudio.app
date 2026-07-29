@@ -21,9 +21,8 @@ export default function WorkspacePage() {
     processingStep,
     isSettingsOpen,
     apiKeys,
+    isAllKeysExhausted
   } = useAppStore();
-
-  const isAllKeysExhausted = apiKeys.length > 0 && apiKeys.every(k => k.status === 'exhausted');
 
   const handleDownloadAll = async () => {
     // Assuming simple download action for now
@@ -48,7 +47,8 @@ export default function WorkspacePage() {
             <div className="lg:hidden">
               <button
                 onClick={handleDownloadAll}
-                className="flex items-center gap-2 bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+                disabled={layers.length === 0}
+                className="flex items-center gap-2 bg-[#7C3AED] hover:bg-[#6D28D9] disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
               >
                 <Download size={16} />
                 {t('downloadAll')}

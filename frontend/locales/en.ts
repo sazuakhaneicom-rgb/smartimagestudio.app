@@ -9,5 +9,12 @@ export const en: TranslationKeys = {
   notifications: { keySwitched: 'Key {from} exhausted, switched to key {to}', lastKey: '⚠️ Last API key in use!', allExhausted: 'All API keys are exhausted', addMoreKeys: 'Add new keys', tryLater: 'Please try again later', keyRecovered: 'Key {key} is ready to use again' },
   workspace: { newImage: 'New Image', downloadAll: 'Download All' },
   theme: { light: 'Light Mode', dark: 'Dark Mode' },
-  errors: { invalidFormat: 'Unsupported format. Use JPG, PNG, or WEBP', tooLarge: 'File size must be under 15 MB', noApiKey: 'Please add an API key in settings first', processingFailed: 'Processing failed, please try again', invalidKey: 'Invalid API key' }
+  errors: { invalidFormat: 'Unsupported format. Use JPG, PNG, or WEBP', tooLarge: 'File size must be under 15 MB', noApiKey: 'Please add an API key in settings first', processingFailed: 'Processing failed, please try again', invalidKey: 'Invalid API key' },
+  allKeysExhausted: 'All API Keys Exhausted',
+  allKeysExhaustedDesc: 'All the Gemini API keys you have added have reached their rate limit. Please add a new key or wait a while.',
+  addNewKey: 'Add New Key',
+  tryAgainLater: 'Try again later',
+  newImage: 'New Image',
+  downloadAll: 'Download All',
+  noLayersGenerated: 'No layers generated.'
 };

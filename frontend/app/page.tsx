@@ -7,7 +7,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useAppStore } from '@/store/useAppStore';
 import Header from '@/components/Header';
 import { listenToFeatureFlags, FeatureFlags, defaultFeatureFlags } from '@/lib/adminAnalytics';
-import { X, Loader2, CheckCircle, AlertCircle, Info, Scissors, Sparkles, ScanLine, Shapes, Crop, Languages } from 'lucide-react';
+import { X, Loader2, CheckCircle, AlertCircle, Info, Scissors, Sparkles, ScanLine, Shapes, Crop, Languages, Camera } from 'lucide-react';
 
 const ViewLoader = () => (
   <div className="w-full flex flex-col items-center justify-center p-12 min-h-[40vh] animate-in fade-in duration-500">
@@ -26,8 +26,10 @@ const ImageToHdView = dynamic(() => import('@/components/ImageToHdView'), { ssr:
 const LogoBwView = dynamic(() => import('@/components/LogoBwView'), { ssr: false, loading: () => <ViewLoader /> });
 const PhotoResizerView = dynamic(() => import('@/components/PhotoResizerView'), { ssr: false, loading: () => <ViewLoader /> });
 const ImageTranslatorView = dynamic(() => import('@/components/ImageTranslatorView'), { ssr: false, loading: () => <ViewLoader /> });
+const StudioMakerView = dynamic(() => import('@/components/StudioMakerView'), { ssr: false, loading: () => <ViewLoader /> });
 
 import SettingsModal from '@/components/SettingsModal';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 function NotificationToast() {
   const { notifications, removeNotification } = useAppStore();
@@ -114,7 +116,7 @@ function ProcessingStatus() {
         </h2>
         <p className="text-gray-500 dark:text-gray-400 text-center max-w-md text-base leading-relaxed">
           {isError
-            ? 'একটি সমস্যা হয়েছে। নিচে notification দেখুন এবং আবার চেষ্টা করুন।'
+            ? 'একটি সমস্যা হয়েছে। নিচে notification দেখুন এবং আবার চেষ্টা করুন.'
             : 'অনুগ্রহ করে অপেক্ষা করুন। AI আপনার ছবির লেয়ার আলাদা করছে।'}
         </p>
       </div>
@@ -143,7 +145,8 @@ export default function Home() {
     setOriginalImage,
     setLayers,
     setProcessingStep,
-    isSettingsOpen
+    isSettingsOpen,
+    siteSettings
   } = useAppStore();
 
   const [flags, setFlags] = useState<FeatureFlags>(defaultFeatureFlags);
@@ -334,35 +337,60 @@ export default function Home() {
                     ইমেজ স্ক্যানার
                   </button>
                 )}
+
+                {/* Studio Maker (Always visible for testing) */}
+                {true && (
+                  <button
+                    onClick={() => {
+                      setAppMode('studio-maker');
+                      setOriginalImage(null);
+                      setLayers([]);
+                      setProcessingStep('idle');
+                      setCurrentView('upload');
+                    }}
+                    className={`flex-1 sm:flex-none flex items-center justify-center min-w-[130px] sm:min-w-[140px] gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${
+                      appMode === 'studio-maker' 
+                        ? 'bg-indigo-600 text-white shadow-md scale-[1.02]' 
+                        : 'text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                    }`}
+                  >
+                    <Camera className="w-5 h-5" />
+                    স্টুডিও মেকার
+                  </button>
+                )}
               </div>
             )}
 
             {currentView === 'upload' && appMode === 'layer-extractor' && (
               <div className="w-full flex flex-col items-center justify-center animate-in slide-in-from-bottom-12 fade-in duration-1000">
                 <div className="w-full max-w-md">
-                  <UploadDropzone />
+                  <ErrorBoundary><UploadDropzone /></ErrorBoundary>
                 </div>
               </div>
             )}
 
             {currentView === 'upload' && appMode === 'bg-remover' && (
-              <BgRemoverView />
+              <ErrorBoundary><BgRemoverView /></ErrorBoundary>
             )}
 
             {currentView === 'upload' && appMode === 'image-upscaler' && (
-              <ImageToHdView />
+              <ErrorBoundary><ImageToHdView /></ErrorBoundary>
             )}
 
             {currentView === 'upload' && appMode === 'logo-bw' && (
-              <LogoBwView />
+              <ErrorBoundary><LogoBwView /></ErrorBoundary>
             )}
 
             {currentView === 'upload' && appMode === 'photo-resizer' && (
-              <PhotoResizerView />
+              <ErrorBoundary><PhotoResizerView /></ErrorBoundary>
             )}
 
             {currentView === 'upload' && appMode === 'text-extractor' && (
-              <ImageTranslatorView />
+              <ErrorBoundary><ImageTranslatorView /></ErrorBoundary>
+            )}
+
+            {currentView === 'upload' && appMode === 'studio-maker' && (
+              <ErrorBoundary><StudioMakerView /></ErrorBoundary>
             )}
 
             {currentView === 'processing' && <ProcessingStatus />}

@@ -2,7 +2,8 @@
 
 import { useAppStore } from '@/store/useAppStore';
 import { useTranslation } from '@/lib/i18n';
-import { Layers, Settings, Download } from 'lucide-react';
+import { Layers, Settings, Download, Camera } from 'lucide-react';
+import Link from 'next/link';
 import ThemeToggle from './ThemeToggle';
 import LanguageToggle from './LanguageToggle';
 import { useEffect, useState } from 'react';

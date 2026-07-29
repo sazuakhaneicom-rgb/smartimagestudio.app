@@ -100,8 +100,12 @@ interface AppState {
   setCurrentView: (view: 'upload' | 'processing' | 'workspace') => void;
   
   // App Mode
-  appMode: 'layer-extractor' | 'bg-remover' | 'image-upscaler' | 'logo-bw' | 'photo-resizer' | 'text-extractor';
-  setAppMode: (mode: 'layer-extractor' | 'bg-remover' | 'image-upscaler' | 'logo-bw' | 'photo-resizer' | 'text-extractor') => void;
+  appMode: 'layer-extractor' | 'bg-remover' | 'image-upscaler' | 'logo-bw' | 'photo-resizer' | 'text-extractor' | 'studio-maker';
+  setAppMode: (mode: 'layer-extractor' | 'bg-remover' | 'image-upscaler' | 'logo-bw' | 'photo-resizer' | 'text-extractor' | 'studio-maker') => void;
+  
+  // Studio Maker Sub-tool State
+  studioMakerActiveSubTool: 'menu' | 'passport' | 'print' | 'crop';
+  setStudioMakerActiveSubTool: (tool: 'menu' | 'passport' | 'print' | 'crop') => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -121,8 +125,7 @@ export const useAppStore = create<AppState>()(
   originalFileName: null,
   setOriginalImage: (data, name) => set({ 
     originalImage: data, 
-    originalFileName: name || null,
-    currentView: data ? 'workspace' : 'upload'
+    originalFileName: name || null
   }),
   
   imageToUpscale: null,
@@ -207,7 +210,11 @@ export const useAppStore = create<AppState>()(
   
   // App Mode
   appMode: 'bg-remover',
-  setAppMode: (mode) => set({ appMode: mode })
+  setAppMode: (mode) => set({ appMode: mode }),
+  
+  // Studio Maker State
+  studioMakerActiveSubTool: 'menu',
+  setStudioMakerActiveSubTool: (tool) => set({ studioMakerActiveSubTool: tool })
     }),
     {
       name: 'smart-image-api-keys',

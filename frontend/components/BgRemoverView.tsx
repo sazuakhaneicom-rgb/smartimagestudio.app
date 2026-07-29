@@ -23,6 +23,7 @@ export default function BgRemoverView() {
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isEditingMask, setIsEditingMask] = useState(false);
+  const [localImage, setLocalImage] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -42,6 +43,7 @@ export default function BgRemoverView() {
       
       const origUrl = URL.createObjectURL(fileOrBlob);
       setOriginalUrl(origUrl);
+      setLocalImage(origUrl);
       setResultUrl(null);
 
       let simulatedProgress: NodeJS.Timeout | null = null;
@@ -179,6 +181,7 @@ export default function BgRemoverView() {
   };
 
   const processLogoMode = async (bgType: 'white' | 'black') => {
+    
     if (!originalUrl) return;
     setIsProcessing(true);
     setProgress(100);

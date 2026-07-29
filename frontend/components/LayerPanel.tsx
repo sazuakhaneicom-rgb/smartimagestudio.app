@@ -44,7 +44,7 @@ export default function LayerPanel() {
       <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
         <h2 className="font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
           <Layers size={18} className="text-[#7C3AED]" />
-          {t('layers') || 'লেয়ার সমূহ'}
+          {t('layers.title') || 'লেয়ার সমূহ'}
         </h2>
         <span className="bg-[#7C3AED]/10 text-[#7C3AED] px-2.5 py-0.5 rounded-full text-xs font-semibold">
           {layers.length}
@@ -55,7 +55,7 @@ export default function LayerPanel() {
         {layers.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-3">
             <Layers size={40} className="text-gray-200 dark:text-gray-700" />
-            <p className="text-sm text-center">{t('noLayers') || 'কোন লেয়ার নেই'}</p>
+            <p className="text-sm text-center">{t('layers.noLayers') || 'কোন লেয়ার নেই'}</p>
           </div>
         ) : (
           layers.map((layer) => (
@@ -71,7 +71,7 @@ export default function LayerPanel() {
           className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#7C3AED] to-[#A78BFA] hover:from-[#6D28D9] hover:to-[#8B5CF6] disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white px-4 py-3 rounded-xl font-medium transition-all duration-300 shadow-md hover:shadow-lg disabled:shadow-none"
         >
           {isDownloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-          {isDownloading ? 'ডাউনলোড হচ্ছে...' : (t('downloadAllZip') || 'সব ডাউনলোড করুন (ZIP)')}
+          {isDownloading ? 'ডাউনলোড হচ্ছে...' : (t('layers.downloadAll') || 'সব ডাউনলোড করুন (ZIP)')}
         </button>
       </div>
 

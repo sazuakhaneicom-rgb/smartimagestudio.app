@@ -7,7 +7,14 @@ export const bn = {
   notifications: { keySwitched: 'কী {from}-এর সীমা শেষ, কী {to}-এ পরিবর্তন করা হয়েছে', lastKey: '⚠️ শেষ API কী ব্যবহৃত হচ্ছে!', allExhausted: 'সব API কী-এর সীমা শেষ হয়ে গেছে', addMoreKeys: 'নতুন কী যোগ করুন', tryLater: 'কিছুক্ষণ পর আবার চেষ্টা করুন', keyRecovered: 'কী {key} আবার ব্যবহারযোগ্য' },
   workspace: { newImage: 'নতুন ছবি', downloadAll: 'সব ডাউনলোড' },
   theme: { light: 'লাইট মোড', dark: 'ডার্ক মোড' },
-  errors: { invalidFormat: 'এই ফরম্যাট সাপোর্টেড নয়। JPG, PNG বা WEBP ব্যবহার করুন', tooLarge: 'ফাইল সাইজ ১৫ MB-এর বেশি হতে পারবে না', noApiKey: 'অনুগ্রহ করে প্রথমে সেটিংস থেকে API কী যোগ করুন', processingFailed: 'প্রসেসিং ব্যর্থ হয়েছে, আবার চেষ্টা করুন', invalidKey: 'API কী সঠিক নয়' }
+  errors: { invalidFormat: 'এই ফরম্যাট সাপোর্টেড নয়। JPG, PNG বা WEBP ব্যবহার করুন', tooLarge: 'ফাইল সাইজ ১৫ MB-এর বেশি হতে পারবে না', noApiKey: 'অনুগ্রহ করে প্রথমে সেটিংস থেকে API কী যোগ করুন', processingFailed: 'প্রসেসিং ব্যর্থ হয়েছে, আবার চেষ্টা করুন', invalidKey: 'API কী সঠিক নয়' },
+  allKeysExhausted: 'সব API কী-এর সীমা শেষ হয়ে গেছে',
+  allKeysExhaustedDesc: 'আপনার যোগ করা সবগুলো জেমিনি API কী এর রেট লিমিট শেষ হয়ে গেছে। দয়া করে নতুন কী যোগ করুন অথবা কিছুক্ষণ অপেক্ষা করুন।',
+  addNewKey: 'নতুন কী যোগ করুন',
+  tryAgainLater: 'কিছুক্ষণ পর আবার চেষ্টা করুন',
+  newImage: 'নতুন ছবি',
+  downloadAll: 'সব ডাউনলোড',
+  noLayersGenerated: 'কোনো লেয়ার তৈরি হয়নি।'
 };
 
 export type TranslationKeys = typeof bn;
