@@ -888,8 +888,8 @@ export default function StudioMakerView() {
             {/* Tabbed Controls for Manual Mode */}
             {editMode === 'manual' && (
               <div className="flex-1 flex flex-col gap-3 min-h-0">
-                {/* Control Tabs Header */}
-                <div className="flex overflow-x-auto custom-scrollbar gap-1 p-1 bg-gray-100 dark:bg-gray-800/60 rounded-xl border border-gray-200 dark:border-gray-700/60 shrink-0">
+                {/* Control Tabs Header (2 rows x 3 columns - 100% Visible without horizontal scrolling) */}
+                <div className="grid grid-cols-3 gap-1 p-1 bg-gray-100 dark:bg-gray-800/60 rounded-xl border border-gray-200 dark:border-gray-700/60 shrink-0">
                   {[
                     { id: 'light', label: 'আলো', icon: <Sun className="w-3 h-3" /> },
                     { id: 'color', label: 'রঙ', icon: <Droplet className="w-3 h-3" /> },
@@ -901,7 +901,7 @@ export default function StudioMakerView() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${activeTab === tab.id ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
+                      className={`flex items-center justify-center gap-1 px-1.5 py-1.5 rounded-lg text-[10px] font-bold text-center transition-all ${activeTab === tab.id ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
                     >
                       {tab.icon} {tab.label}
                     </button>
@@ -909,54 +909,23 @@ export default function StudioMakerView() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-3">
-                  {/* TAB 1: Light & Exposure */}
+                  {/* TAB 1: Light & Exposure (2-Column Grid) */}
                   {activeTab === 'light' && (
-                    <div className="flex flex-col gap-3.5 animate-in fade-in duration-200">
+                    <div className="grid grid-cols-2 gap-x-2.5 gap-y-2 animate-in fade-in duration-200">
                       {[
-                        { label: 'ব্রাইটনেস', icon: <Sun className="w-3.5 h-3.5"/>, val: brightness, set: setBrightness, min: 0, max: 200, display: brightness - 100 },
-                        { label: 'কন্ট্রাস্ট', icon: <Contrast className="w-3.5 h-3.5"/>, val: contrast, set: setContrast, min: 0, max: 200, display: contrast - 100 },
-                        { label: 'এক্সপোজার', icon: <Sun className="w-3.5 h-3.5"/>, val: exposure, set: setExposure, min: -100, max: 100, display: exposure },
-                        { label: 'হাইলাইটস', icon: <Sun className="w-3.5 h-3.5"/>, val: highlights, set: setHighlights, min: -100, max: 100, display: highlights },
-                        { label: 'শ্যাডো', icon: <Contrast className="w-3.5 h-3.5"/>, val: shadows, set: setShadows, min: -100, max: 100, display: shadows },
-                        { label: 'হোয়াইটস', icon: <Sun className="w-3.5 h-3.5"/>, val: whites, set: setWhites, min: -100, max: 100, display: whites },
-                        { label: 'ব্ল্যাকস', icon: <Contrast className="w-3.5 h-3.5"/>, val: blacks, set: setBlacks, min: -100, max: 100, display: blacks },
-                        { label: 'গামা', icon: <Focus className="w-3.5 h-3.5"/>, val: gamma, set: setGamma, min: 0.2, max: 2.2, step: 0.1, display: Math.round((gamma - 1) * 100) }
+                        { label: 'ব্রাইটনেস', icon: <Sun className="w-3 h-3"/>, val: brightness, set: setBrightness, min: 0, max: 200, display: brightness - 100 },
+                        { label: 'কন্ট্রাস্ট', icon: <Contrast className="w-3 h-3"/>, val: contrast, set: setContrast, min: 0, max: 200, display: contrast - 100 },
+                        { label: 'এক্সপোজার', icon: <Sun className="w-3 h-3"/>, val: exposure, set: setExposure, min: -100, max: 100, display: exposure },
+                        { label: 'হাইলাইটস', icon: <Sun className="w-3 h-3"/>, val: highlights, set: setHighlights, min: -100, max: 100, display: highlights },
+                        { label: 'শ্যাডো', icon: <Contrast className="w-3 h-3"/>, val: shadows, set: setShadows, min: -100, max: 100, display: shadows },
+                        { label: 'হোয়াইটস', icon: <Sun className="w-3 h-3"/>, val: whites, set: setWhites, min: -100, max: 100, display: whites },
+                        { label: 'ব্ল্যাকস', icon: <Contrast className="w-3 h-3"/>, val: blacks, set: setBlacks, min: -100, max: 100, display: blacks },
+                        { label: 'গামা', icon: <Focus className="w-3 h-3"/>, val: gamma, set: setGamma, min: 0.2, max: 2.2, step: 0.1, display: Math.round((gamma - 1) * 100) }
                       ].map((filter, idx) => (
-                        <div key={idx} className="flex flex-col gap-1">
-                          <div className="flex justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
-                            <span className="flex items-center gap-1.5">{filter.icon} {filter.label}</span>
-                            <span className="text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-1.5 py-0.5 rounded text-[10px] min-w-[32px] text-center font-mono">
-                              {filter.display > 0 ? `+${filter.display}` : filter.display}%
-                            </span>
-                          </div>
-                          <input 
-                            type="range" 
-                            min={filter.min} 
-                            max={filter.max} 
-                            step={filter.step || 1}
-                            value={filter.val} 
-                            onChange={e => filter.set(Number(e.target.value))} 
-                            className="w-full accent-orange-500 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* TAB 2: Color & Tone */}
-                  {activeTab === 'color' && (
-                    <div className="flex flex-col gap-3.5 animate-in fade-in duration-200">
-                      {[
-                        { label: 'স্যাচুরেশন', icon: <Droplet className="w-3.5 h-3.5"/>, val: saturation, set: setSaturation, min: 0, max: 200, display: saturation - 100 },
-                        { label: 'ভাইব্রেন্স', icon: <Sparkles className="w-3.5 h-3.5"/>, val: vibrance, set: setVibrance, min: -100, max: 100, display: vibrance },
-                        { label: 'টেম্পারেচার (ওয়ার্মথ)', icon: <Sun className="w-3.5 h-3.5"/>, val: temperature, set: setTemperature, min: -100, max: 100, display: temperature },
-                        { label: 'টিন্ট', icon: <Droplet className="w-3.5 h-3.5"/>, val: tint, set: setTint, min: -100, max: 100, display: tint },
-                        { label: 'হিউ (Hue Shift)', icon: <Palette className="w-3.5 h-3.5"/>, val: hue, set: setHue, min: -180, max: 180, display: hue }
-                      ].map((filter, idx) => (
-                        <div key={idx} className="flex flex-col gap-1">
-                          <div className="flex justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
-                            <span className="flex items-center gap-1.5">{filter.icon} {filter.label}</span>
-                            <span className="text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-1.5 py-0.5 rounded text-[10px] min-w-[32px] text-center font-mono">
+                        <div key={idx} className="flex flex-col gap-0.5">
+                          <div className="flex justify-between text-[10px] font-bold text-gray-500 dark:text-gray-400">
+                            <span className="flex items-center gap-1 truncate">{filter.icon} {filter.label}</span>
+                            <span className="text-orange-500 font-mono text-[9px] min-w-[24px] text-right">
                               {filter.display > 0 ? `+${filter.display}` : filter.display}%
                             </span>
                           </div>
@@ -967,27 +936,27 @@ export default function StudioMakerView() {
                             step={(filter as any).step || 1}
                             value={filter.val} 
                             onChange={e => filter.set(Number(e.target.value))} 
-                            className="w-full accent-orange-500 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
+                            className="w-full accent-orange-500 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
                           />
                         </div>
                       ))}
                     </div>
                   )}
 
-                  {/* TAB 3: Details & Sharpness */}
-                  {activeTab === 'detail' && (
-                    <div className="flex flex-col gap-3.5 animate-in fade-in duration-200">
+                  {/* TAB 2: Color & Tone (2-Column Grid) */}
+                  {activeTab === 'color' && (
+                    <div className="grid grid-cols-2 gap-x-2.5 gap-y-2 animate-in fade-in duration-200">
                       {[
-                        { label: 'শার্পনেস', icon: <Focus className="w-3.5 h-3.5"/>, val: sharpness, set: setSharpness, min: 0, max: 10, display: sharpness, step: 0.1 },
-                        { label: 'স্ট্রাকচার', icon: <Sliders className="w-3.5 h-3.5"/>, val: structure, set: setStructure, min: 0, max: 10, display: structure, step: 0.1 },
-                        { label: 'টেক্সচার', icon: <Focus className="w-3.5 h-3.5"/>, val: texture, set: setTexture, min: 0, max: 10, display: texture, step: 0.1 },
-                        { label: 'ক্ল্যারিটি', icon: <Sparkles className="w-3.5 h-3.5"/>, val: clarity, set: setClarity, min: -100, max: 100, display: clarity },
-                        { label: 'ওপাসিটি (স্বচ্ছতা)', icon: <Sun className="w-3.5 h-3.5"/>, val: opacity, set: setOpacity, min: 0, max: 100, display: opacity }
+                        { label: 'স্যাচুরেশন', icon: <Droplet className="w-3 h-3"/>, val: saturation, set: setSaturation, min: 0, max: 200, display: saturation - 100 },
+                        { label: 'ভাইব্রেন্স', icon: <Sparkles className="w-3 h-3"/>, val: vibrance, set: setVibrance, min: -100, max: 100, display: vibrance },
+                        { label: 'টেম্পারেচার', icon: <Sun className="w-3 h-3"/>, val: temperature, set: setTemperature, min: -100, max: 100, display: temperature },
+                        { label: 'টিন্ট', icon: <Droplet className="w-3 h-3"/>, val: tint, set: setTint, min: -100, max: 100, display: tint },
+                        { label: 'হিউ (Hue Shift)', icon: <Palette className="w-3 h-3"/>, val: hue, set: setHue, min: -180, max: 180, display: hue }
                       ].map((filter, idx) => (
-                        <div key={idx} className="flex flex-col gap-1">
-                          <div className="flex justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
-                            <span className="flex items-center gap-1.5">{filter.icon} {filter.label}</span>
-                            <span className="text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-1.5 py-0.5 rounded text-[10px] min-w-[32px] text-center font-mono">
+                        <div key={idx} className="flex flex-col gap-0.5">
+                          <div className="flex justify-between text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate">
+                            <span className="flex items-center gap-1 truncate">{filter.icon} {filter.label}</span>
+                            <span className="text-orange-500 font-mono text-[9px] min-w-[24px] text-right">
                               {filter.display > 0 ? `+${filter.display}` : filter.display}%
                             </span>
                           </div>
@@ -995,10 +964,41 @@ export default function StudioMakerView() {
                             type="range" 
                             min={filter.min} 
                             max={filter.max} 
-                            step={filter.step || 1}
+                            step={(filter as any).step || 1}
                             value={filter.val} 
                             onChange={e => filter.set(Number(e.target.value))} 
-                            className="w-full accent-orange-500 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
+                            className="w-full accent-orange-500 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* TAB 3: Details & Sharpness (2-Column Grid) */}
+                  {activeTab === 'detail' && (
+                    <div className="grid grid-cols-2 gap-x-2.5 gap-y-2 animate-in fade-in duration-200">
+                      {[
+                        { label: 'শার্পনেস', icon: <Focus className="w-3 h-3"/>, val: sharpness, set: setSharpness, min: 0, max: 10, display: sharpness, step: 0.1 },
+                        { label: 'স্ট্রাকচার', icon: <Sliders className="w-3 h-3"/>, val: structure, set: setStructure, min: 0, max: 10, display: structure, step: 0.1 },
+                        { label: 'টেক্সচার', icon: <Focus className="w-3 h-3"/>, val: texture, set: setTexture, min: 0, max: 10, display: texture, step: 0.1 },
+                        { label: 'ক্ল্যারিটি', icon: <Sparkles className="w-3 h-3"/>, val: clarity, set: setClarity, min: -100, max: 100, display: clarity },
+                        { label: 'ওপাসিটি', icon: <Sun className="w-3 h-3"/>, val: opacity, set: setOpacity, min: 0, max: 100, display: opacity }
+                      ].map((filter, idx) => (
+                        <div key={idx} className="flex flex-col gap-0.5">
+                          <div className="flex justify-between text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate">
+                            <span className="flex items-center gap-1 truncate">{filter.icon} {filter.label}</span>
+                            <span className="text-orange-500 font-mono text-[9px] min-w-[24px] text-right">
+                              {filter.display > 0 ? `+${filter.display}` : filter.display}%
+                            </span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min={filter.min} 
+                            max={filter.max} 
+                            step={(filter as any).step || 1}
+                            value={filter.val} 
+                            onChange={e => filter.set(Number(e.target.value))} 
+                            className="w-full accent-orange-500 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
                           />
                         </div>
                       ))}
@@ -1007,16 +1007,16 @@ export default function StudioMakerView() {
 
                   {/* TAB 4: RGB Balance */}
                   {activeTab === 'rgb' && (
-                    <div className="flex flex-col gap-3.5 animate-in fade-in duration-200">
+                    <div className="flex flex-col gap-2.5 animate-in fade-in duration-200">
                       {[
                         { label: 'রেড চ্যানেল (Red)', val: redBalance, set: setRedBalance, min: -100, max: 100, color: 'accent-red-500' },
                         { label: 'গ্রীন চ্যানেল (Green)', val: greenBalance, set: setGreenBalance, min: -100, max: 100, color: 'accent-green-500' },
                         { label: 'ব্লু চ্যানেল (Blue)', val: blueBalance, set: setBlueBalance, min: -100, max: 100, color: 'accent-blue-500' }
                       ].map((rgb, idx) => (
-                        <div key={idx} className="flex flex-col gap-1">
-                          <div className="flex justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
+                        <div key={idx} className="flex flex-col gap-0.5">
+                          <div className="flex justify-between text-[10px] font-bold text-gray-500 dark:text-gray-400">
                             <span>{rgb.label}</span>
-                            <span className="text-orange-500 font-mono text-[10px]">{rgb.val > 0 ? `+${rgb.val}` : rgb.val}%</span>
+                            <span className="text-orange-500 font-mono text-[9px]">{rgb.val > 0 ? `+${rgb.val}` : rgb.val}%</span>
                           </div>
                           <input 
                             type="range" 
@@ -1024,7 +1024,7 @@ export default function StudioMakerView() {
                             max={rgb.max} 
                             value={rgb.val} 
                             onChange={e => rgb.set(Number(e.target.value))} 
-                            className={`w-full ${rgb.color} h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer transition-all`} 
+                            className={`w-full ${rgb.color} h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer transition-all`} 
                           />
                         </div>
                       ))}
