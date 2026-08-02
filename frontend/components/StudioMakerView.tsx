@@ -887,7 +887,7 @@ export default function StudioMakerView() {
 
             {/* Tabbed Controls for Manual Mode */}
             {editMode === 'manual' && (
-              <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+              <div className="flex-1 flex flex-col gap-3 min-h-0">
                 {/* Control Tabs Header */}
                 <div className="flex overflow-x-auto custom-scrollbar gap-1 p-1 bg-gray-100 dark:bg-gray-800/60 rounded-xl border border-gray-200 dark:border-gray-700/60 shrink-0">
                   {[
@@ -1111,8 +1111,6 @@ export default function StudioMakerView() {
                 </div>
               </div>
             )}
-
-            <div className="flex-1"></div>
 
             {/* Format Selector & Action Buttons */}
             <div className="flex flex-col gap-3 mt-auto">
