@@ -40,7 +40,9 @@ import {
   Eye,
   Glasses,
   Minus,
-  Check
+  Check,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import ReactCrop, { Crop as CropType, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
@@ -693,13 +695,39 @@ export default function StudioMakerView() {
                </div>
               ) : (
                 <div className="relative w-full h-full overflow-hidden flex flex-col items-center justify-center p-4">
-                  {/* Current Active Size Indicator Badge */}
-                  <div className="mb-3 px-4 py-1.5 bg-black/60 backdrop-blur-md rounded-full text-white text-xs font-semibold flex items-center gap-2 border border-white/10 shadow-lg z-20">
-                    <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
-                    <span>সাইজ: {PHOTO_DIMENSIONS[photoSize]?.name || 'অরিজিনাল'}</span>
-                    {PHOTO_DIMENSIONS[photoSize]?.unit && (
-                      <span className="text-orange-400 font-mono text-[11px]">({PHOTO_DIMENSIONS[photoSize]?.unit})</span>
-                    )}
+                  {/* Header Bar: Current Active Size Indicator Badge + Interactive Zoom Controls */}
+                  <div className="mb-3 flex flex-wrap items-center justify-center gap-3 z-20">
+                    <div className="px-4 py-1.5 bg-black/60 backdrop-blur-md rounded-full text-white text-xs font-semibold flex items-center gap-2 border border-white/10 shadow-lg">
+                      <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
+                      <span>সাইজ: {PHOTO_DIMENSIONS[photoSize]?.name || 'অরিজিনাল'}</span>
+                      {PHOTO_DIMENSIONS[photoSize]?.unit && (
+                        <span className="text-orange-400 font-mono text-[11px]">({PHOTO_DIMENSIONS[photoSize]?.unit})</span>
+                      )}
+                    </div>
+
+                    <div className="px-3 py-1 bg-black/60 backdrop-blur-md rounded-full text-white text-xs flex items-center gap-2 border border-white/10 shadow-lg">
+                      <button 
+                        onClick={() => setZoomLevel(prev => Math.max(30, prev - 10))} 
+                        className="p-1 hover:bg-white/20 rounded transition-colors text-orange-400"
+                        title="জুম আউট (-)"
+                      >
+                        <ZoomOut className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="font-mono text-[11px] min-w-[34px] text-center font-bold">{zoomLevel}%</span>
+                      <button 
+                        onClick={() => setZoomLevel(prev => Math.min(200, prev + 10))} 
+                        className="p-1 hover:bg-white/20 rounded transition-colors text-orange-400"
+                        title="জুম ইন (+)"
+                      >
+                        <ZoomIn className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => setZoomLevel(100)} 
+                        className="ml-1 px-2 py-0.5 bg-white/10 hover:bg-white/20 rounded text-[10px] font-bold transition-colors text-gray-200"
+                      >
+                        ফিট
+                      </button>
+                    </div>
                   </div>
 
                   {isProcessing ? (
@@ -734,10 +762,11 @@ export default function StudioMakerView() {
                               ref={imgRef}
                               src={resultImage || originalImage} 
                               onLoad={onImageLoad}
-                              className="max-h-[48vh] lg:max-h-[52vh] max-w-[100%] w-auto h-auto object-contain relative z-10" 
+                              className="max-h-[36vh] lg:max-h-[40vh] max-w-[100%] w-auto h-auto object-contain relative z-10 transition-transform duration-200" 
                               style={{
+                                transform: `scale(${zoomLevel / 100})`,
                                 filter: editMode === 'manual' 
-                                  ? `brightness(${brightness}%) contrast(${contrast + sharpness * 2}%) saturate(${saturation}%)` 
+                                  ? getCSSFilterString({ brightness, contrast, saturation, sharpness, exposure, highlights, shadows, temperature, tint, gamma }) 
                                   : undefined
                               }}
                               alt="Preview" 
