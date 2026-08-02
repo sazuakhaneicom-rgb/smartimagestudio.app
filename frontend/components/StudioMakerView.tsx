@@ -46,6 +46,7 @@ import { useAppStore } from '@/store/useAppStore';
 import ReactCrop, { Crop as CropType, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { removeBackground } from '@imgly/background-removal';
+import { AlertTriangle } from 'lucide-react';
 
 type EditMode = 'manual' | 'ai';
 
@@ -176,26 +177,10 @@ export default function StudioMakerView() {
     if (imgRef.current && photoSize && photoSize !== 'original') {
       const dim = PHOTO_DIMENSIONS[photoSize];
       if (dim) {
-        const aspect = dim.w / dim.h;
-        const imgW = imgRef.current.width;
-        const imgH = imgRef.current.height;
-        let cropW, cropH;
-        
-        if (imgW / imgH > aspect) {
-          cropH = 90; 
-          cropW = (cropH * aspect * imgH) / imgW;
-        } else {
-          cropW = 90;
-          cropH = (cropW * imgW) / (aspect * imgH);
+        const { width, height } = imgRef.current;
+        if (width && height) {
+          setCrop(centerAspectCrop(width, height, dim.w / dim.h));
         }
-        
-        setCrop({
-          unit: '%',
-          width: cropW,
-          height: cropH,
-          x: (100 - cropW) / 2,
-          y: (100 - cropH) / 2
-        });
       }
     } else {
       setCrop(undefined);
@@ -209,6 +194,9 @@ export default function StudioMakerView() {
     setResultImage(null);
     setBgColor('transparent');
     setCrop(undefined);
+    setCompletedCrop(null);
+    // Reset input so the same file can be re-selected
+    e.target.value = '';
   };
 
   const handleDualFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -222,7 +210,15 @@ export default function StudioMakerView() {
     setResultImage(null);
     setDualImage(null);
     setCrop(undefined);
+    setCompletedCrop(null);
     setBgColor('transparent');
+    setBrightness(100);
+    setContrast(100);
+    setSaturation(100);
+    setSharpness(0);
+    setAiDress(null);
+    setAiInstructions([]);
+    setProgress(0);
   };
 
   const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -233,15 +229,7 @@ export default function StudioMakerView() {
     }
   };
 
-  useEffect(() => {
-    if (imgRef.current) {
-      const { width, height } = imgRef.current;
-      const dim = PHOTO_DIMENSIONS[photoSize];
-      if (dim && width && height) {
-        setCrop(centerAspectCrop(width, height, dim.w / dim.h));
-      }
-    }
-  }, [photoSize]);
+  // Removed duplicate useEffect - already handled above
 
   const toggleInstruction = (id: string) => {
     setAiInstructions(prev => 
@@ -249,30 +237,30 @@ export default function StudioMakerView() {
     );
   };
 
-  const handleAiDressSelect = async (index: number) => {
+  // Toast notification state
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleAiDressSelect = (index: number) => {
     setAiDress(index);
-    if (!originalImage) return;
-    
-    // TODO: Connect to a real AI Virtual Try-On API (e.g., Replicate, Fal.ai)
-    // For now, this just selects the dress style visually.
-    // When a real backend is connected, uncomment the processing logic below:
-    
-    // setIsProcessing(true);
-    // setProgress(10);
-    // try {
-    //   const simProg = setInterval(() => setProgress(p => Math.min(p + 15, 90)), 500);
-    //   const response = await fetch('YOUR_AI_API_ENDPOINT', { ... });
-    //   clearInterval(simProg);
-    //   setProgress(100);
-    //   setTimeout(() => setIsProcessing(false), 500);
-    // } catch (error) {
-    //   console.error(error);
-    //   setIsProcessing(false);
-    // }
+    const dress = DRESS_STYLES[index];
+    if (dress.id === 'none') {
+      showToast('পোশাক সিলেকশন বাতিল করা হয়েছে');
+      return;
+    }
+    showToast(`"${dress.label}" সিলেক্ট করা হয়েছে। AI পোশাক পরিবর্তন শীঘ্রই সক্রিয় হবে।`);
   };
 
   const processAutoRemoveBg = async () => {
-    if (!originalImage || resultImage) return;
+    if (!originalImage) return;
+    if (resultImage) {
+      // Allow re-running by resetting result first
+      setResultImage(null);
+    }
     setIsProcessing(true);
     setProgress(10);
     try {
@@ -765,14 +753,40 @@ export default function StudioMakerView() {
               <button onClick={handlePrint} className="w-full py-3.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-bold rounded-xl flex items-center justify-center gap-2 border border-blue-200 dark:border-blue-800/50 transition-colors shadow-sm">
                 <Printer className="w-4 h-4" /> প্রিন্ট
               </button>
-              <button onClick={handleDownload} className="w-full py-3.5 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/40 text-orange-600 dark:text-orange-400 font-bold rounded-xl flex items-center justify-center gap-2 border border-orange-200 dark:border-orange-800/50 transition-colors shadow-sm">
-                <Save className="w-4 h-4" /> সেভ করুন
+              <button 
+                onClick={async () => {
+                  const canvas = await getProcessedCanvas();
+                  if (!canvas) return;
+                  try {
+                    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+                    if (blob && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+                      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                      showToast('ছবিটি ক্লিপবোর্ডে কপি হয়েছে!');
+                    } else {
+                      handleDownload();
+                    }
+                  } catch {
+                    handleDownload();
+                  }
+                }} 
+                className="w-full py-3.5 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/40 text-orange-600 dark:text-orange-400 font-bold rounded-xl flex items-center justify-center gap-2 border border-orange-200 dark:border-orange-800/50 transition-colors shadow-sm"
+              >
+                <Save className="w-4 h-4" /> কপি করুন
               </button>
             </div>
 
           </div>
         )}
       </div>
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="bg-gray-900 text-white px-6 py-3 rounded-xl shadow-2xl border border-white/10 backdrop-blur-md flex items-center gap-3 text-sm font-medium">
+            <AlertTriangle className="w-4 h-4 text-orange-400 shrink-0" />
+            {toastMessage}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
