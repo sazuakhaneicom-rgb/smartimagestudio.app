@@ -767,6 +767,8 @@ export default function StudioMakerView() {
                    onClick={() => fileInputRef.current?.click()}
                    className="w-full aspect-[3/4] max-h-[calc(100vh-250px)] border-[2px] border-dashed border-gray-600/50 dark:border-gray-700 rounded-3xl flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-white/5 transition-all group relative overflow-hidden"
                  >
+                   <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
+                   
                    <div className="w-20 h-20 rounded-full bg-gray-800/80 backdrop-blur flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-indigo-900/50 transition-all shadow-xl">
                      <ImageIcon className="w-10 h-10 text-gray-400 group-hover:text-indigo-400" />
                    </div>
