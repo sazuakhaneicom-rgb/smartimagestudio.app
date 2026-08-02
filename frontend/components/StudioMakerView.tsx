@@ -70,6 +70,7 @@ import {
   BackgroundConfig, 
   defaultBackgroundConfig 
 } from '@/lib/manualEditorEngine';
+import { processAiClothingChange } from '@/lib/aiClothingEngine';
 
 type EditMode = 'manual' | 'ai';
 
@@ -181,6 +182,7 @@ export default function StudioMakerView() {
   const [bgColor, setBgColor] = useState('transparent');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [processingStage, setProcessingStage] = useState<string>('');
 
   // Manual Mode State (18 Full Sliders + RGB + Transforms + Protection)
   const [brightness, setBrightness] = useState(100);
@@ -363,14 +365,47 @@ export default function StudioMakerView() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleAiDressSelect = (index: number) => {
+  const handleAiDressSelect = async (index: number) => {
+    if (isProcessing) return; // Prevent duplicate clicks during processing
     setAiDress(index);
     const dress = DRESS_STYLES[index];
     if (dress.id === 'none') {
+      setResultImage(null);
+      setDualImage(null);
       showToast('পোশাক সিলেকশন বাতিল করা হয়েছে');
       return;
     }
-    showToast(`"${dress.label}" সিলেক্ট করা হয়েছে। AI পোশাক পরিবর্তন শীঘ্রই সক্রিয় হবে।`);
+
+    if (!originalImage) {
+      showToast('অনুগ্রহ করে প্রথমে একটি ছবি আপলোড করুন');
+      return;
+    }
+
+    setIsProcessing(true);
+    setProgress(10);
+    setProcessingStage('ছবি বিশ্লেষণ ও ফেস সনাক্তকরণ হচ্ছে...');
+
+    try {
+      const generatedImage = await processAiClothingChange(
+        originalImage,
+        dress.img || 'shirt_white.jpg',
+        aiInstructions,
+        (prog, stage) => {
+          setProgress(prog);
+          setProcessingStage(stage);
+        }
+      );
+
+      setResultImage(generatedImage);
+      setDualImage(originalImage);
+      showToast(`"${dress.label}" সফলভাবে তৈরি করা হয়েছে!`);
+    } catch (err) {
+      console.error('AI Clothing error:', err);
+      showToast('পোশাক পরিবর্তন ব্যর্থ হয়েছে, পুনরায় চেষ্টা করুন।');
+    } finally {
+      setIsProcessing(false);
+      setProcessingStage('');
+    }
   };
 
   const processAutoRemoveBg = async () => {
@@ -801,8 +836,8 @@ export default function StudioMakerView() {
                          <div className="w-20 h-20 border-4 border-orange-500 border-t-transparent rounded-full animate-spin absolute inset-0"></div>
                          <Sparkles className="w-6 h-6 text-orange-400 absolute inset-0 m-auto animate-pulse" />
                       </div>
-                      <h3 className="text-xl font-bold mb-2">এআই প্রসেসিং হচ্ছে...</h3>
-                      <p className="font-medium text-gray-400 mb-6">{progress}% সম্পন্ন</p>
+                      <h3 className="text-xl font-bold mb-1 text-center px-4">{processingStage || 'এআই প্রসেসিং হচ্ছে...'}</h3>
+                      <p className="font-semibold text-orange-400 text-sm mb-6">{progress}% সম্পন্ন</p>
                       <div className="w-64 bg-gray-800 h-2 rounded-full overflow-hidden">
                         <div className="bg-gradient-to-r from-orange-400 to-orange-600 h-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
                       </div>
