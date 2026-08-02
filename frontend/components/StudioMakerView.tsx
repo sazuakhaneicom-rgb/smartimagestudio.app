@@ -47,6 +47,7 @@ import ReactCrop, { Crop as CropType, PixelCrop, centerCrop, makeAspectCrop } fr
 import 'react-image-crop/dist/ReactCrop.css';
 import { removeBackground } from '@imgly/background-removal';
 import { AlertTriangle } from 'lucide-react';
+import { processCanvasPipeline, getCSSFilterString, downloadCanvas, ExportFormat, ImageAdjustments } from '@/lib/imageProcessor';
 
 type EditMode = 'manual' | 'ai';
 
@@ -159,11 +160,25 @@ export default function StudioMakerView() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  // Manual Mode State
+  // Manual Mode State (10 Full Sliders)
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
   const [saturation, setSaturation] = useState(100);
   const [sharpness, setSharpness] = useState(0);
+  const [exposure, setExposure] = useState(0);
+  const [highlights, setHighlights] = useState(0);
+  const [shadows, setShadows] = useState(0);
+  const [temperature, setTemperature] = useState(0);
+  const [tint, setTint] = useState(0);
+  const [gamma, setGamma] = useState(1.0);
+  const [isBlurBg, setIsBlurBg] = useState(false);
+
+  // Zoom & Pan State
+  const [zoomLevel, setZoomLevel] = useState(100);
+
+  // Export Format State
+  const [exportFormat, setExportFormat] = useState<'png' | 'jpeg' | 'webp'>('png');
+  const [showExportModal, setShowExportModal] = useState(false);
   
   // Crop State
   const [crop, setCrop] = useState<CropType>();
@@ -269,6 +284,14 @@ export default function StudioMakerView() {
     setContrast(100);
     setSaturation(100);
     setSharpness(0);
+    setExposure(0);
+    setHighlights(0);
+    setShadows(0);
+    setTemperature(0);
+    setTint(0);
+    setGamma(1.0);
+    setIsBlurBg(false);
+    setZoomLevel(100);
     setAiDress(null);
     setAiInstructions([]);
     setProgress(0);
@@ -339,79 +362,50 @@ export default function StudioMakerView() {
   const getProcessedCanvas = async (): Promise<HTMLCanvasElement | null> => {
     if (!originalImage || !imgRef.current) return null;
 
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-
     const image = new Image();
     image.crossOrigin = "anonymous";
     image.src = resultImage || originalImage;
     await new Promise(resolve => { image.onload = resolve; });
 
-    // Handle Dual Photo export
-    if (photoSize === 'dual' && dualImage) {
-      const secondImage = new Image();
-      secondImage.crossOrigin = "anonymous";
-      secondImage.src = dualImage;
-      await new Promise(resolve => { secondImage.onload = resolve; });
-
-      const singleW = image.width;
-      const singleH = image.height;
-      canvas.width = singleW * 2 + 20; // Side by side with gap
-      canvas.height = singleH;
-
-      if (bgColor !== 'transparent') {
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-
-      ctx.filter = `brightness(${brightness}%) contrast(${contrast + sharpness * 2}%) saturate(${saturation}%)`;
-      ctx.drawImage(image, 0, 0, singleW, singleH);
-      ctx.drawImage(secondImage, singleW + 20, 0, singleW, singleH);
-      ctx.filter = 'none';
-      return canvas;
-    }
-
-    // Standard single photo export with crop
-    let cropX = 0, cropY = 0, cropW = image.width, cropH = image.height;
-    
+    let cropArea = null;
     if (completedCrop && completedCrop.width > 0 && completedCrop.height > 0) {
       const scaleX = image.width / imgRef.current.width;
       const scaleY = image.height / imgRef.current.height;
-      cropX = completedCrop.x * scaleX;
-      cropY = completedCrop.y * scaleY;
-      cropW = completedCrop.width * scaleX;
-      cropH = completedCrop.height * scaleY;
+      cropArea = {
+        x: completedCrop.x * scaleX,
+        y: completedCrop.y * scaleY,
+        width: completedCrop.width * scaleX,
+        height: completedCrop.height * scaleY
+      };
     }
 
-    canvas.width = cropW;
-    canvas.height = cropH;
+    const currentAdjustments: ImageAdjustments = {
+      brightness,
+      contrast,
+      saturation,
+      sharpness,
+      exposure,
+      highlights,
+      shadows,
+      temperature,
+      tint,
+      gamma
+    };
 
-    // 1. Draw Background Color
-    if (bgColor !== 'transparent') {
-      ctx.fillStyle = bgColor;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-
-    // 2. Apply Filters and Draw Image
-    ctx.filter = `brightness(${brightness}%) contrast(${contrast + sharpness * 2}%) saturate(${saturation}%)`;
-    ctx.drawImage(
+    return processCanvasPipeline(
       image,
-      cropX, cropY, cropW, cropH,
-      0, 0, cropW, cropH
+      cropArea,
+      bgColor,
+      currentAdjustments,
+      isBlurBg
     );
-    ctx.filter = 'none';
-
-    return canvas;
   };
 
   const handleDownload = async () => {
     const canvas = await getProcessedCanvas();
     if (!canvas) return;
-    const link = document.createElement('a');
-    link.download = `StudioMaker-${Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    downloadCanvas(canvas, `StudioMaker-${Date.now()}`, exportFormat);
+    showToast(`ছবিটি ${exportFormat.toUpperCase()} ফরমেটে ডাউনলোড হয়েছে!`);
   };
 
   const handlePrint = async () => {
@@ -430,31 +424,44 @@ export default function StudioMakerView() {
   // ---------------- UI COMPONENTS ----------------
 
   const renderColorSwatches = (withTransparent: boolean = false) => {
-    const colors = ['#FFFFFF', '#3B82F6', '#0EA5E9', '#9CA3AF', '#2563EB', '#059669', '#FEF3C7'];
+    const colors = ['#FFFFFF', '#000000', '#3B82F6', '#0EA5E9', '#9CA3AF', '#059669', '#FEF3C7'];
     return (
-      <div className="flex flex-wrap gap-2 mt-3">
-        {withTransparent && (
-          <button 
-            onClick={() => handleBgColorClick('transparent')} 
-            className={`w-10 h-10 rounded-xl border border-gray-200 checkerboard ${bgColor === 'transparent' ? 'ring-2 ring-orange-500 scale-95' : 'hover:scale-105'} transition-all`}
-            title="Transparent"
-          />
-        )}
-        {colors.map(color => (
-          <button 
-            key={color}
-            onClick={() => handleBgColorClick(color)}
-            className={`w-10 h-10 rounded-xl border border-gray-200 shadow-sm flex items-center justify-center ${bgColor === color ? 'ring-2 ring-orange-500 scale-95' : 'hover:scale-105'} transition-all`}
-            style={{ backgroundColor: color }}
-            title={color}
-          >
-            {bgColor === color && <CheckCircle2 className={`w-5 h-5 drop-shadow ${color === '#FFFFFF' ? 'text-gray-800' : 'text-white'}`} />}
-          </button>
-        ))}
-        <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center cursor-pointer hover:scale-105 transition-all text-purple-600 relative overflow-hidden">
-           <Palette className="w-5 h-5 absolute pointer-events-none" />
-           <input type="color" value={bgColor !== 'transparent' ? bgColor : '#000000'} onChange={e => handleBgColorClick(e.target.value)} className="w-[150%] h-[150%] opacity-0 cursor-pointer" />
+      <div className="flex flex-col gap-3 mt-3">
+        <div className="flex flex-wrap gap-2">
+          {withTransparent && (
+            <button 
+              onClick={() => handleBgColorClick('transparent')} 
+              className={`w-9 h-9 rounded-xl border border-gray-200 checkerboard ${bgColor === 'transparent' && !isBlurBg ? 'ring-2 ring-orange-500 scale-95' : 'hover:scale-105'} transition-all`}
+              title="Transparent"
+            />
+          )}
+          {colors.map(color => (
+            <button 
+              key={color}
+              onClick={() => { setIsBlurBg(false); handleBgColorClick(color); }}
+              className={`w-9 h-9 rounded-xl border border-gray-200 shadow-sm flex items-center justify-center ${bgColor === color && !isBlurBg ? 'ring-2 ring-orange-500 scale-95' : 'hover:scale-105'} transition-all`}
+              style={{ backgroundColor: color }}
+              title={color}
+            >
+              {bgColor === color && !isBlurBg && <CheckCircle2 className={`w-4 h-4 drop-shadow ${color === '#FFFFFF' ? 'text-gray-800' : 'text-white'}`} />}
+            </button>
+          ))}
+          <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center cursor-pointer hover:scale-105 transition-all text-purple-600 relative overflow-hidden">
+             <Palette className="w-4 h-4 absolute pointer-events-none" />
+             <input type="color" value={bgColor !== 'transparent' ? bgColor : '#000000'} onChange={e => { setIsBlurBg(false); handleBgColorClick(e.target.value); }} className="w-[150%] h-[150%] opacity-0 cursor-pointer" />
+          </div>
         </div>
+        
+        {/* Background Blur Toggle Button */}
+        <button
+          onClick={() => {
+            setIsBlurBg(!isBlurBg);
+            showToast(!isBlurBg ? 'ব্যাকগ্রাউন্ড ব্লার সক্রিয় হয়েছে' : 'ব্লার বন্ধ করা হয়েছে');
+          }}
+          className={`w-full py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${isBlurBg ? 'bg-orange-50 border-orange-500 text-orange-600 dark:bg-orange-900/20' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700'}`}
+        >
+          <Sparkles className="w-3.5 h-3.5" /> {isBlurBg ? '✓ ব্যাকগ্রাউন্ড ব্লার (অন)' : 'ব্যাকগ্রাউন্ড ব্লার যুক্ত করুন'}
+        </button>
       </div>
     );
   };
@@ -794,17 +801,23 @@ export default function StudioMakerView() {
                     <h3 className="font-bold text-gray-800 dark:text-gray-200">রঙ ও আলো</h3>
                   </div>
                   
-                  <div className="flex flex-col gap-5">
+                  <div className="flex flex-col gap-4">
                     {[
                       { label: 'ব্রাইটনেস', icon: <Sun className="w-3.5 h-3.5"/>, val: brightness, set: setBrightness, min: 0, max: 200, display: brightness - 100 },
                       { label: 'কন্ট্রাস্ট', icon: <Contrast className="w-3.5 h-3.5"/>, val: contrast, set: setContrast, min: 0, max: 200, display: contrast - 100 },
                       { label: 'স্যাচুরেশন', icon: <Droplet className="w-3.5 h-3.5"/>, val: saturation, set: setSaturation, min: 0, max: 200, display: saturation - 100 },
-                      { label: 'শার্পনেস', icon: <Focus className="w-3.5 h-3.5"/>, val: sharpness, set: setSharpness, min: 0, max: 10, display: sharpness, step: 0.1 }
+                      { label: 'শার্পনেস', icon: <Focus className="w-3.5 h-3.5"/>, val: sharpness, set: setSharpness, min: 0, max: 10, display: sharpness, step: 0.1 },
+                      { label: 'এক্সপোজার', icon: <Sun className="w-3.5 h-3.5"/>, val: exposure, set: setExposure, min: -100, max: 100, display: exposure },
+                      { label: 'হাইলাইটস', icon: <Sun className="w-3.5 h-3.5"/>, val: highlights, set: setHighlights, min: -100, max: 100, display: highlights },
+                      { label: 'শ্যাডো', icon: <Contrast className="w-3.5 h-3.5"/>, val: shadows, set: setShadows, min: -100, max: 100, display: shadows },
+                      { label: 'টেম্পারেচার', icon: <Sun className="w-3.5 h-3.5"/>, val: temperature, set: setTemperature, min: -100, max: 100, display: temperature },
+                      { label: 'টিন্ট', icon: <Droplet className="w-3.5 h-3.5"/>, val: tint, set: setTint, min: -100, max: 100, display: tint },
+                      { label: 'গামা', icon: <Focus className="w-3.5 h-3.5"/>, val: gamma, set: setGamma, min: 0.2, max: 2.2, step: 0.1, display: Math.round((gamma - 1) * 100) }
                     ].map((filter, idx) => (
-                      <div key={idx} className="flex flex-col gap-2">
+                      <div key={idx} className="flex flex-col gap-1.5">
                         <div className="flex justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
                           <span className="flex items-center gap-1.5">{filter.icon} {filter.label}</span>
-                          <span className="text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-1.5 py-0.5 rounded text-[10px] min-w-[32px] text-center">
+                          <span className="text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-1.5 py-0.5 rounded text-[10px] min-w-[32px] text-center font-mono">
                             {filter.display > 0 ? `+${filter.display}` : filter.display}%
                           </span>
                         </div>
@@ -826,10 +839,25 @@ export default function StudioMakerView() {
 
             <div className="flex-1"></div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col gap-2 mt-auto">
+            {/* Format Selector & Action Buttons */}
+            <div className="flex flex-col gap-3 mt-auto">
+              <div className="flex items-center justify-between text-xs font-bold text-gray-500 dark:text-gray-400 px-1">
+                <span>ডাউনলোড ফরম্যাট:</span>
+                <div className="flex bg-gray-100 dark:bg-gray-800 p-0.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                  {(['png', 'jpeg', 'webp'] as const).map(fmt => (
+                    <button
+                      key={fmt}
+                      onClick={() => setExportFormat(fmt)}
+                      className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase transition-all ${exportFormat === fmt ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
+                    >
+                      {fmt === 'jpeg' ? 'JPG' : fmt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button onClick={handleDownload} className="w-full py-3.5 bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 text-green-600 dark:text-green-400 font-bold rounded-xl flex items-center justify-center gap-2 border border-green-200 dark:border-green-800/50 transition-colors shadow-sm">
-                <Download className="w-4 h-4" /> ডাউনলোড
+                <Download className="w-4 h-4" /> ডাউনলোড ({exportFormat.toUpperCase() === 'JPEG' ? 'JPG' : exportFormat.toUpperCase()})
               </button>
               <button onClick={handlePrint} className="w-full py-3.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-bold rounded-xl flex items-center justify-center gap-2 border border-blue-200 dark:border-blue-800/50 transition-colors shadow-sm">
                 <Printer className="w-4 h-4" /> প্রিন্ট

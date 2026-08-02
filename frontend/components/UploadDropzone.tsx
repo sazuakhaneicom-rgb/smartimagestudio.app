@@ -15,9 +15,16 @@ export default function UploadDropzone() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((file: File) => {
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/heic', 'image/heif'];
+    const isImage = validTypes.includes(file.type) || file.type.startsWith('image/');
+    
+    if (!isImage) {
       addNotification({ type: 'error', message: t('errors.invalidFormat'), autoDismiss: true });
+      return;
+    }
+
+    if (file.size < 100) {
+      addNotification({ type: 'error', message: '⚠️ ফাইলটি ক্ষতিগ্রস্ত বা খালি (Corrupted File)। অন্য ছবি ব্যবহার করুন।', autoDismiss: true });
       return;
     }
 
