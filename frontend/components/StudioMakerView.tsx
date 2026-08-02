@@ -506,7 +506,7 @@ export default function StudioMakerView() {
   );
 
   return (
-    <div className="w-full animate-in fade-in zoom-in-95 duration-500 mt-4 max-w-[1800px] mx-auto px-4">
+    <div className="w-full h-full animate-in fade-in duration-500 max-w-[2560px] mx-auto px-2 sm:px-4 flex flex-col flex-1">
       
       {/* Top Mode Switcher */}
       <div className="flex justify-center mb-6">
@@ -526,10 +526,10 @@ export default function StudioMakerView() {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-140px)] min-h-[600px]">
+      <div className="flex flex-col lg:flex-row gap-4 xl:gap-6 flex-1 min-h-[calc(100vh-170px)]">
         
         {/* ================= LEFT SIDEBAR ================= */}
-        <div className="w-full lg:w-[22rem] flex flex-col gap-6 shrink-0 overflow-y-auto pr-2 custom-scrollbar glass-panel p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-[#1A1128]/80">
+        <div className="w-full lg:w-80 xl:w-96 flex flex-col gap-5 shrink-0 overflow-y-auto pr-2 custom-scrollbar glass-panel p-4 xl:p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-[#1A1128]/80">
           
           {/* Photo Size */}
           <div>
@@ -762,7 +762,7 @@ export default function StudioMakerView() {
                               ref={imgRef}
                               src={resultImage || originalImage} 
                               onLoad={onImageLoad}
-                              className="max-h-[36vh] lg:max-h-[40vh] max-w-[100%] w-auto h-auto object-contain relative z-10 transition-transform duration-200" 
+                              className="max-h-[58vh] lg:max-h-[64vh] xl:max-h-[68vh] max-w-[95%] w-auto h-auto object-contain relative z-10 transition-transform duration-200" 
                               style={{
                                 transform: `scale(${zoomLevel / 100})`,
                                 filter: editMode === 'manual' 
@@ -796,7 +796,7 @@ export default function StudioMakerView() {
 
         {/* ================= RIGHT SIDEBAR ================= */}
         {(editMode === 'manual' || editMode === 'ai') && (
-          <div className="w-full lg:w-[18rem] flex flex-col gap-6 shrink-0 overflow-y-auto pl-2 custom-scrollbar glass-panel p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-[#1A1128]/80 animate-in slide-in-from-right-8 duration-300">
+          <div className="w-full lg:w-80 xl:w-96 flex flex-col gap-5 shrink-0 overflow-y-auto pl-2 custom-scrollbar glass-panel p-4 xl:p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-[#1A1128]/80 animate-in slide-in-from-right-8 duration-300">
             
             {/* Mobile Upload Card */}
             <div 
