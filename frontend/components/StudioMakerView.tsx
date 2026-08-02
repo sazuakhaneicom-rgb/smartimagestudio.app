@@ -50,21 +50,21 @@ import { AlertTriangle } from 'lucide-react';
 
 type EditMode = 'manual' | 'ai';
 
-const PHOTO_DIMENSIONS: Record<string, { w: number, h: number } | null> = {
+const PHOTO_DIMENSIONS: Record<string, { w: number, h: number, name: string, unit: string } | null> = {
   'original': null,
-  'passport': { w: 35, h: 45 },
-  'dual': { w: 35, h: 45 },
-  'visa': { w: 51, h: 51 }, 
-  '2r': { w: 64, h: 89 },
-  '3r': { w: 89, h: 127 },
-  '4r': { w: 102, h: 152 },
-  '5r': { w: 127, h: 178 },
-  '6r': { w: 152, h: 203 },
-  '8r': { w: 203, h: 254 },
-  'a4': { w: 210, h: 297 },
-  'letter': { w: 216, h: 279 },
-  'epass': { w: 35, h: 45 },
-  'birth': { w: 35, h: 45 }
+  'passport': { w: 35, h: 45, name: 'পাসপোর্ট', unit: '৩৫ × ৪৫ মিমি' },
+  'dual': { w: 35, h: 45, name: 'ডুয়াল', unit: '৩৫ × ৪৫ মিমি' },
+  'visa': { w: 51, h: 51, name: 'ভিসা', unit: '৫০ × ৫০ মিমি' }, 
+  '2r': { w: 64, h: 89, name: '2R', unit: '৬৪ × ৮৯ মিমি' },
+  '3r': { w: 89, h: 127, name: '3R', unit: '৮৯ × ১২৭ মিমি' },
+  '4r': { w: 102, h: 152, name: '4R', unit: '১০২ × ১৫২ মিমি' },
+  '5r': { w: 127, h: 178, name: '5R', unit: '১২৭ × ১৭৮ মিমি' },
+  '6r': { w: 152, h: 203, name: '6R', unit: '১৫২ × ২০৩ মিমি' },
+  '8r': { w: 203, h: 254, name: '8R', unit: '২০৩ × ২৫৪ মিমি' },
+  'a4': { w: 210, h: 297, name: 'A4', unit: '২১০ × ২৯৭ মিমি' },
+  'letter': { w: 216, h: 279, name: 'Letter', unit: '২১৬ × ২৭৯ মিমি' },
+  'epass': { w: 35, h: 45, name: 'ই-পাসপোর্ট', unit: '৩৫ × ৪৫ মিমি' },
+  'birth': { w: 35, h: 45, name: 'জন্ম নিবন্ধন', unit: '৩৫ × ৪৫ মিমি' }
 };
 
 const PHOTO_SIZES_MANUAL = [
@@ -154,7 +154,7 @@ export default function StudioMakerView() {
 
   // State
   const [editMode, setEditMode] = useState<EditMode>('manual');
-  const [photoSize, setPhotoSize] = useState('passport');
+  const [photoSize, setPhotoSize] = useState('original');
   const [bgColor, setBgColor] = useState('transparent');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -176,32 +176,69 @@ export default function StudioMakerView() {
   const [dualImage, setDualImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
 
-  // Get the current aspect ratio for crop
-  const getCurrentAspect = useCallback(() => {
-    const dim = PHOTO_DIMENSIONS[photoSize];
-    if (!dim) return undefined; // 'original' = free crop
-    return dim.w / dim.h;
-  }, [photoSize]);
-
-  // Auto-center crop when photo size changes
-  useEffect(() => {
-    const dim = PHOTO_DIMENSIONS[photoSize];
+  // Helper to apply crop for a given size
+  const applyCropForSize = useCallback((sizeId: string) => {
+    const dim = PHOTO_DIMENSIONS[sizeId];
     if (!dim) {
-      // 'original' mode - no crop
       setCrop(undefined);
       setCompletedCrop(null);
       return;
     }
     if (imgRef.current) {
-      const { width, height } = imgRef.current;
-      if (width && height) {
+      const imgW = imgRef.current.width;
+      const imgH = imgRef.current.height;
+      if (imgW && imgH) {
         const aspect = dim.w / dim.h;
-        const newCrop = centerAspectCrop(width, height, aspect);
-        setCrop(newCrop);
-        setCompletedCrop(null);
+        let cropW = 80;
+        let cropH = 80;
+        const imgAspect = imgW / imgH;
+        
+        if (imgAspect > aspect) {
+          cropH = 85;
+          cropW = (cropH * aspect) / imgAspect;
+        } else {
+          cropW = 85;
+          cropH = (cropW * imgAspect) / aspect;
+        }
+
+        const percentCrop: CropType = {
+          unit: '%',
+          width: cropW,
+          height: cropH,
+          x: (100 - cropW) / 2,
+          y: (100 - cropH) / 2
+        };
+        setCrop(percentCrop);
+
+        // Pre-calculate completed pixel crop so export works without manual dragging
+        const pixelCrop: PixelCrop = {
+          unit: 'px',
+          x: (percentCrop.x * imgW) / 100,
+          y: (percentCrop.y * imgH) / 100,
+          width: (percentCrop.width * imgW) / 100,
+          height: (percentCrop.height * imgH) / 100
+        };
+        setCompletedCrop(pixelCrop);
       }
     }
-  }, [photoSize]);
+  }, []);
+
+  // Handle size selection button click
+  const handlePhotoSizeChange = (sizeId: string) => {
+    setPhotoSize(sizeId);
+    applyCropForSize(sizeId);
+    const dim = PHOTO_DIMENSIONS[sizeId];
+    if (dim) {
+      showToast(`${dim.name} সাইজ সিলেক্ট করা হয়েছে (${dim.unit})`);
+    } else {
+      showToast('অরিজিনাল সাইজ সিলেক্ট করা হয়েছে (সম্পূর্ণ ছবি)');
+    }
+  };
+
+  // Auto-center crop when photo size changes
+  useEffect(() => {
+    applyCropForSize(photoSize);
+  }, [photoSize, applyCropForSize]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -238,14 +275,8 @@ export default function StudioMakerView() {
   };
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    const { width, height } = e.currentTarget;
-    const dim = PHOTO_DIMENSIONS[photoSize];
-    if (dim && width && height) {
-      const aspect = dim.w / dim.h;
-      const newCrop = centerAspectCrop(width, height, aspect);
-      setCrop(newCrop);
-    }
-  }, [photoSize]);
+    applyCropForSize(photoSize);
+  }, [photoSize, applyCropForSize]);
 
   const toggleInstruction = (id: string) => {
     setAiInstructions(prev => 
@@ -317,7 +348,31 @@ export default function StudioMakerView() {
     image.src = resultImage || originalImage;
     await new Promise(resolve => { image.onload = resolve; });
 
-    // Use cropped area or full image
+    // Handle Dual Photo export
+    if (photoSize === 'dual' && dualImage) {
+      const secondImage = new Image();
+      secondImage.crossOrigin = "anonymous";
+      secondImage.src = dualImage;
+      await new Promise(resolve => { secondImage.onload = resolve; });
+
+      const singleW = image.width;
+      const singleH = image.height;
+      canvas.width = singleW * 2 + 20; // Side by side with gap
+      canvas.height = singleH;
+
+      if (bgColor !== 'transparent') {
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      ctx.filter = `brightness(${brightness}%) contrast(${contrast + sharpness * 2}%) saturate(${saturation}%)`;
+      ctx.drawImage(image, 0, 0, singleW, singleH);
+      ctx.drawImage(secondImage, singleW + 20, 0, singleW, singleH);
+      ctx.filter = 'none';
+      return canvas;
+    }
+
+    // Standard single photo export with crop
     let cropX = 0, cropY = 0, cropW = image.width, cropH = image.height;
     
     if (completedCrop && completedCrop.width > 0 && completedCrop.height > 0) {
@@ -477,8 +532,8 @@ export default function StudioMakerView() {
               {(editMode === 'manual' ? PHOTO_SIZES_MANUAL : PHOTO_SIZES_AI).map(size => (
                 <button 
                   key={size.id}
-                  onClick={() => setPhotoSize(size.id)}
-                  className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${photoSize === size.id ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600 shadow-sm' : 'border-gray-200 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600 text-gray-500 bg-white dark:bg-gray-800/50'}`}
+                  onClick={() => handlePhotoSizeChange(size.id)}
+                  className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${photoSize === size.id ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600 shadow-sm ring-1 ring-orange-500' : 'border-gray-200 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600 text-gray-500 bg-white dark:bg-gray-800/50'}`}
                 >
                   {renderIcon(size.icon, photoSize === size.id)}
                   <span className="text-[10px] font-bold text-center leading-tight">{size.label}</span>
@@ -604,7 +659,7 @@ export default function StudioMakerView() {
                    onClick={() => fileInputRef.current?.click()}
                    className="w-full aspect-[3/4] border-[2px] border-dashed border-gray-600/50 dark:border-gray-700 rounded-3xl flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-white/5 transition-all group relative overflow-hidden"
                  >
-                   <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
+<input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
                    
                    <div className="absolute inset-x-8 top-8 bottom-8 border border-gray-700/30 rounded-2xl pointer-events-none"></div>
 
@@ -629,50 +684,59 @@ export default function StudioMakerView() {
                    </div>
                  )}
                </div>
-             ) : (
-               <div className="relative w-full h-full overflow-auto custom-scrollbar flex p-8 lg:p-12">
-                 {isProcessing ? (
-                   <div className="m-auto flex flex-col items-center text-white bg-black/50 p-8 rounded-3xl backdrop-blur-md border border-white/10 shadow-2xl">
-                     <div className="relative mb-6">
-                        <div className="w-20 h-20 border-4 border-gray-700 rounded-full"></div>
-                        <div className="w-20 h-20 border-4 border-orange-500 border-t-transparent rounded-full animate-spin absolute inset-0"></div>
-                        <Sparkles className="w-6 h-6 text-orange-400 absolute inset-0 m-auto animate-pulse" />
-                     </div>
-                     <h3 className="text-xl font-bold mb-2">এআই প্রসেসিং হচ্ছে...</h3>
-                     <p className="font-medium text-gray-400 mb-6">{progress}% সম্পন্ন</p>
-                     <div className="w-64 bg-gray-800 h-2 rounded-full overflow-hidden">
-                       <div className="bg-gradient-to-r from-orange-400 to-orange-600 h-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
-                     </div>
-                   </div>
-                 ) : (
-                   <div className="m-auto flex flex-col xl:flex-row items-center justify-center gap-10">
-                     <div 
-                       className="relative rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all overflow-hidden border-2 border-white/10 flex items-center justify-center shrink-0"
-                       style={{ 
-                         backgroundColor: bgColor !== 'transparent' ? bgColor : undefined,
-                         backgroundImage: bgColor === 'transparent' ? 'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYNgfQEhjwEiqOOBhYGBgYcABcWoAE2AMmEYj8OAgN2B4DAwMgz/D8BQAw/gZ8J3oXPAAAAAASUVORK5CYII=")' : undefined
-                       }}
-                     >
-                        <ReactCrop
-                          crop={crop}
-                          onChange={(_, percentCrop) => setCrop(percentCrop)}
-                          onComplete={(c) => setCompletedCrop(c)}
-                          aspect={getCurrentAspect()}
-                        >
-                           <img 
-                             ref={imgRef}
-                             src={resultImage || originalImage} 
-                             onLoad={onImageLoad}
-                             className="max-h-[65vh] max-w-[80vw] w-auto object-contain relative z-10" 
-                             style={{
-                               filter: editMode === 'manual' 
-                                 ? `brightness(${brightness}%) contrast(${contrast + sharpness * 2}%) saturate(${saturation}%)` 
-                                 : undefined
-                             }}
-                             alt="Preview" 
-                           />
-                        </ReactCrop>
-                     </div>
+              ) : (
+                <div className="relative w-full h-full overflow-hidden flex flex-col items-center justify-center p-4">
+                  {/* Current Active Size Indicator Badge */}
+                  <div className="mb-3 px-4 py-1.5 bg-black/60 backdrop-blur-md rounded-full text-white text-xs font-semibold flex items-center gap-2 border border-white/10 shadow-lg z-20">
+                    <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
+                    <span>সাইজ: {PHOTO_DIMENSIONS[photoSize]?.name || 'অরিজিনাল'}</span>
+                    {PHOTO_DIMENSIONS[photoSize]?.unit && (
+                      <span className="text-orange-400 font-mono text-[11px]">({PHOTO_DIMENSIONS[photoSize]?.unit})</span>
+                    )}
+                  </div>
+
+                  {isProcessing ? (
+                    <div className="m-auto flex flex-col items-center text-white bg-black/50 p-8 rounded-3xl backdrop-blur-md border border-white/10 shadow-2xl">
+                      <div className="relative mb-6">
+                         <div className="w-20 h-20 border-4 border-gray-700 rounded-full"></div>
+                         <div className="w-20 h-20 border-4 border-orange-500 border-t-transparent rounded-full animate-spin absolute inset-0"></div>
+                         <Sparkles className="w-6 h-6 text-orange-400 absolute inset-0 m-auto animate-pulse" />
+                      </div>
+                      <h3 className="text-xl font-bold mb-2">এআই প্রসেসিং হচ্ছে...</h3>
+                      <p className="font-medium text-gray-400 mb-6">{progress}% সম্পন্ন</p>
+                      <div className="w-64 bg-gray-800 h-2 rounded-full overflow-hidden">
+                        <div className="bg-gradient-to-r from-orange-400 to-orange-600 h-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="m-auto flex flex-col xl:flex-row items-center justify-center gap-6 max-h-full max-w-full overflow-hidden">
+                      <div 
+                        className="relative rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.6)] transition-all overflow-hidden border-2 border-white/10 flex items-center justify-center shrink-0"
+                        style={{ 
+                          backgroundColor: bgColor !== 'transparent' ? bgColor : undefined,
+                          backgroundImage: bgColor === 'transparent' ? 'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYNgfQEhjwEiqOOBhYGBgYcABcWoAE2AMmEYj8OAgN2B4DAwMgz/D8BQAw/gZ8J3oXPAAAAAASUVORK5CYII=")' : undefined
+                        }}
+                      >
+                         <ReactCrop
+                           crop={crop}
+                           onChange={(_, percentCrop) => setCrop(percentCrop)}
+                           onComplete={(c) => setCompletedCrop(c)}
+                           aspect={PHOTO_DIMENSIONS[photoSize] ? PHOTO_DIMENSIONS[photoSize]!.w / PHOTO_DIMENSIONS[photoSize]!.h : undefined}
+                         >
+                            <img 
+                              ref={imgRef}
+                              src={resultImage || originalImage} 
+                              onLoad={onImageLoad}
+                              className="max-h-[48vh] lg:max-h-[52vh] max-w-[100%] w-auto h-auto object-contain relative z-10" 
+                              style={{
+                                filter: editMode === 'manual' 
+                                  ? `brightness(${brightness}%) contrast(${contrast + sharpness * 2}%) saturate(${saturation}%)` 
+                                  : undefined
+                              }}
+                              alt="Preview" 
+                            />
+                         </ReactCrop>
+                      </div>
                      
                      {/* Dual Image Preview */}
                      {editMode === 'ai' && dualImage && (
