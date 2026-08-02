@@ -213,8 +213,8 @@ export default function Home() {
       <div className="relative z-10 flex flex-col h-full">
         <Header />
 
-        <main className="flex-1 w-full max-w-[2560px] mx-auto px-2 sm:px-4 lg:px-6 py-2 md:py-3 pt-20 sm:pt-24 flex flex-col lg:min-h-0 lg:overflow-y-auto">
-          <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[2400px] mx-auto">
+        <main className="flex-1 w-full max-w-[2560px] mx-auto px-2 sm:px-4 lg:px-6 py-1.5 md:py-2 pt-16 sm:pt-20 flex flex-col h-[calc(100vh-70px)] overflow-hidden">
+          <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[2400px] mx-auto h-full overflow-hidden">
             
             {/* Premium Mode Switcher */}
             {currentView === 'upload' && (

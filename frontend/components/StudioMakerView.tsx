@@ -749,8 +749,8 @@ export default function StudioMakerView() {
 
         </div>
 
-        {/* ================= MAIN WORKSPACE ================= */}
-        <div className="flex-1 bg-[#151927] dark:bg-[#0A0D14] rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col relative shadow-inner">
+        {/* ================= MAIN WORKSPACE (FIXED ARTBOARD SYSTEM) ================= */}
+        <div className="flex-1 bg-[#151927] dark:bg-[#0A0D14] rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col relative shadow-inner h-full min-h-0 max-h-[calc(100vh-160px)]">
           
           <div className="absolute top-4 right-4 z-10 flex gap-2">
              {originalImage && (
@@ -760,17 +760,13 @@ export default function StudioMakerView() {
              )}
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center p-6 relative h-full overflow-hidden">
+          <div className="flex-1 flex flex-col items-center justify-center p-4 relative h-full min-h-0 overflow-hidden">
              {!originalImage ? (
                <div className="w-full max-w-md animate-in zoom-in-95">
                  <div 
                    onClick={() => fileInputRef.current?.click()}
-                   className="w-full aspect-[3/4] border-[2px] border-dashed border-gray-600/50 dark:border-gray-700 rounded-3xl flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-white/5 transition-all group relative overflow-hidden"
+                   className="w-full aspect-[3/4] max-h-[calc(100vh-250px)] border-[2px] border-dashed border-gray-600/50 dark:border-gray-700 rounded-3xl flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-white/5 transition-all group relative overflow-hidden"
                  >
-<input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
-                   
-                   <div className="absolute inset-x-8 top-8 bottom-8 border border-gray-700/30 rounded-2xl pointer-events-none"></div>
-
                    <div className="w-20 h-20 rounded-full bg-gray-800/80 backdrop-blur flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-indigo-900/50 transition-all shadow-xl">
                      <ImageIcon className="w-10 h-10 text-gray-400 group-hover:text-indigo-400" />
                    </div>
@@ -793,7 +789,12 @@ export default function StudioMakerView() {
                  )}
                </div>
               ) : (
-                <div className="relative w-full h-full overflow-hidden flex flex-col items-center justify-center p-4">
+                <div 
+                  onWheel={(e) => {
+                    setZoomLevel(prev => Math.max(30, Math.min(300, prev + (e.deltaY < 0 ? 10 : -10))));
+                  }}
+                  className="relative w-full h-full overflow-hidden flex flex-col items-center justify-center p-2 select-none min-h-0"
+                >
                   {/* Header Bar: Current Active Size Indicator Badge + Interactive Zoom Controls */}
                   <div className="mb-3 flex flex-wrap items-center justify-center gap-3 z-20">
                     <div className="px-4 py-1.5 bg-black/60 backdrop-blur-md rounded-full text-white text-xs font-semibold flex items-center gap-2 border border-white/10 shadow-lg">
