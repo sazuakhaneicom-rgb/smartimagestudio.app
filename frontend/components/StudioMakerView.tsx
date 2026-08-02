@@ -71,7 +71,7 @@ import {
   defaultBackgroundConfig 
 } from '@/lib/manualEditorEngine';
 import { processAiClothingChange } from '@/lib/aiClothingEngine';
-import { FORMAL_CLOTHING_LIBRARY, FormalClothingOption } from '@/lib/passportClothingAssets';
+import { FORMAL_CLOTHING_LIBRARY, FormalClothingOption, FormalClothingVectorIcon } from '@/lib/passportClothingAssets';
 
 type EditMode = 'manual' | 'ai';
 
@@ -686,38 +686,36 @@ export default function StudioMakerView() {
                     <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   </button>
                 </div>
-                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
                   {FORMAL_CLOTHING_LIBRARY.map((dress, index) => (
                     <button 
                       key={dress.id}
                       onClick={() => handleAiDressSelect(index)}
                       title={dress.label}
-                      className={`aspect-[3/4] rounded-xl border flex flex-col items-center justify-between p-2 overflow-hidden transition-all bg-[#121520] relative group ${aiDress === index ? 'border-orange-500 ring-2 ring-orange-500/40 shadow-lg bg-orange-500/10' : 'border-gray-800 hover:border-gray-600'}`}
+                      className={`aspect-[4/5] rounded-xl border flex flex-col items-center justify-between p-2 overflow-hidden transition-all bg-[#151828] hover:bg-[#1C2036] relative group ${
+                        aiDress === index 
+                          ? 'border-orange-500 ring-2 ring-orange-500/60 shadow-[0_0_20px_rgba(249,115,22,0.35)] bg-orange-500/10' 
+                          : 'border-gray-800 hover:border-gray-600'
+                      }`}
                     >
+                      {/* Top Type Badge */}
+                      {dress.badgeText && (
+                        <span className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-white/10 text-orange-400 border border-white/5 tracking-wider truncate max-w-[90%]">
+                          {dress.badgeText}
+                        </span>
+                      )}
+
                       <div className="w-full flex-1 flex items-center justify-center relative my-1">
-                        {dress.id === 'none' ? (
-                          <Ban className="w-7 h-7 text-gray-500" />
-                        ) : (
-                          <svg className="w-10 h-10 text-gray-200" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            {/* Neck cutout line */}
-                            <path d="M 22 14 C 22 28, 42 28, 42 14" stroke="#9CA3AF" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-                            {/* Collar & Lapels */}
-                            <path d="M 22 14 L 32 30 L 42 14" stroke="#E5E7EB" strokeWidth="2.5" fill="none" />
-                            {/* Tie if present */}
-                            {dress.tieColor && (
-                              <path d="M 30 30 L 34 30 L 35 48 L 32 52 L 29 48 Z" fill={dress.tieColor} stroke="#FFFFFF" strokeWidth="0.5" />
-                            )}
-                            {/* Suit Jacket shoulders */}
-                            <path d="M 8 36 Q 20 18 22 14 M 56 36 Q 44 18 42 14 M 8 36 L 8 58 L 56 58 L 56 36" stroke={dress.jacketColor || '#E5E7EB'} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        )}
+                        <FormalClothingVectorIcon option={dress} />
                       </div>
-                      <span className="text-[9px] font-bold text-gray-300 group-hover:text-white truncate w-full text-center leading-tight">
+
+                      <span className="text-[10px] font-bold text-gray-200 group-hover:text-white truncate w-full text-center leading-tight">
                         {dress.label}
                       </span>
+
                       {aiDress === index && (
-                        <div className="absolute top-1 right-1 bg-orange-500 text-white rounded-full p-0.5 shadow-md">
-                          <CheckCircle2 className="w-3 h-3" />
+                        <div className="absolute top-1.5 right-1.5 bg-orange-500 text-white rounded-full p-0.5 shadow-md">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
                         </div>
                       )}
                     </button>
