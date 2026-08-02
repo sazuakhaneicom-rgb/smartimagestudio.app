@@ -924,30 +924,34 @@ export default function StudioMakerView() {
             {/* Tabbed Controls for Manual Mode */}
             {editMode === 'manual' && (
               <div className="flex-1 flex flex-col gap-3 min-h-0">
-                {/* Control Tabs Header (2 rows x 3 columns - 100% Visible without horizontal scrolling) */}
-                <div className="grid grid-cols-3 gap-1 p-1 bg-gray-100 dark:bg-gray-800/60 rounded-xl border border-gray-200 dark:border-gray-700/60 shrink-0">
+                {/* Control Tabs Header (High Contrast & Zero Layout Shift) */}
+                <div className="grid grid-cols-3 gap-1.5 p-1.5 bg-gray-900/80 rounded-xl border border-gray-700/80 shrink-0 shadow-inner">
                   {[
-                    { id: 'light', label: 'আলো', icon: <Sun className="w-3 h-3" /> },
-                    { id: 'color', label: 'রঙ', icon: <Droplet className="w-3 h-3" /> },
-                    { id: 'detail', label: 'ডিটেইল', icon: <Focus className="w-3 h-3" /> },
-                    { id: 'rgb', label: 'RGB', icon: <Sliders className="w-3 h-3" /> },
-                    { id: 'transform', label: 'ট্রান্সফর্ম', icon: <RotateCw className="w-3 h-3" /> },
-                    { id: 'protection', label: 'সুরক্ষা', icon: <ShieldCheck className="w-3 h-3" /> }
+                    { id: 'light', label: 'আলো', icon: <Sun className="w-3.5 h-3.5" /> },
+                    { id: 'color', label: 'রঙ', icon: <Droplet className="w-3.5 h-3.5" /> },
+                    { id: 'detail', label: 'ডিটেইল', icon: <Focus className="w-3.5 h-3.5" /> },
+                    { id: 'rgb', label: 'RGB', icon: <Sliders className="w-3.5 h-3.5" /> },
+                    { id: 'transform', label: 'ট্রান্সফর্ম', icon: <RotateCw className="w-3.5 h-3.5" /> },
+                    { id: 'protection', label: 'সুরক্ষা', icon: <ShieldCheck className="w-3.5 h-3.5" /> }
                   ].map(tab => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center justify-center gap-1 px-1.5 py-1.5 rounded-lg text-[10px] font-bold text-center transition-all ${activeTab === tab.id ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
+                      className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-bold text-center transition-all ${
+                        activeTab === tab.id 
+                          ? 'bg-orange-500 text-white shadow-md font-extrabold' 
+                          : 'text-gray-300 hover:text-white hover:bg-white/10'
+                      }`}
                     >
                       {tab.icon} {tab.label}
                     </button>
                   ))}
                 </div>
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-3">
-                  {/* TAB 1: Light & Exposure (2-Column Grid) */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-3 min-h-[160px]">
+                  {/* TAB 1: Light & Exposure */}
                   {activeTab === 'light' && (
-                    <div className="grid grid-cols-2 gap-x-2.5 gap-y-2 animate-in fade-in duration-200">
+                    <div className="grid grid-cols-2 gap-x-2.5 gap-y-2">
                       {[
                         { label: 'ব্রাইটনেস', icon: <Sun className="w-3 h-3"/>, val: brightness, set: setBrightness, min: 0, max: 200, display: brightness - 100 },
                         { label: 'কন্ট্রাস্ট', icon: <Contrast className="w-3 h-3"/>, val: contrast, set: setContrast, min: 0, max: 200, display: contrast - 100 },
@@ -959,9 +963,9 @@ export default function StudioMakerView() {
                         { label: 'গামা', icon: <Focus className="w-3 h-3"/>, val: gamma, set: setGamma, min: 0.2, max: 2.2, step: 0.1, display: Math.round((gamma - 1) * 100) }
                       ].map((filter, idx) => (
                         <div key={idx} className="flex flex-col gap-0.5">
-                          <div className="flex justify-between text-[10px] font-bold text-gray-500 dark:text-gray-400">
+                          <div className="flex justify-between text-[10px] font-bold text-gray-300 dark:text-gray-300">
                             <span className="flex items-center gap-1 truncate">{filter.icon} {filter.label}</span>
-                            <span className="text-orange-500 font-mono text-[9px] min-w-[24px] text-right">
+                            <span className="text-orange-400 font-mono text-[9px] min-w-[24px] text-right font-bold">
                               {filter.display > 0 ? `+${filter.display}` : filter.display}%
                             </span>
                           </div>
@@ -972,16 +976,16 @@ export default function StudioMakerView() {
                             step={(filter as any).step || 1}
                             value={filter.val} 
                             onChange={e => filter.set(Number(e.target.value))} 
-                            className="w-full accent-orange-500 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
+                            className="w-full accent-orange-500 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
                           />
                         </div>
                       ))}
                     </div>
                   )}
 
-                  {/* TAB 2: Color & Tone (2-Column Grid) */}
+                  {/* TAB 2: Color & Tone */}
                   {activeTab === 'color' && (
-                    <div className="grid grid-cols-2 gap-x-2.5 gap-y-2 animate-in fade-in duration-200">
+                    <div className="grid grid-cols-2 gap-x-2.5 gap-y-2">
                       {[
                         { label: 'স্যাচুরেশন', icon: <Droplet className="w-3 h-3"/>, val: saturation, set: setSaturation, min: 0, max: 200, display: saturation - 100 },
                         { label: 'ভাইব্রেন্স', icon: <Sparkles className="w-3 h-3"/>, val: vibrance, set: setVibrance, min: -100, max: 100, display: vibrance },
@@ -990,9 +994,9 @@ export default function StudioMakerView() {
                         { label: 'হিউ (Hue Shift)', icon: <Palette className="w-3 h-3"/>, val: hue, set: setHue, min: -180, max: 180, display: hue }
                       ].map((filter, idx) => (
                         <div key={idx} className="flex flex-col gap-0.5">
-                          <div className="flex justify-between text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate">
+                          <div className="flex justify-between text-[10px] font-bold text-gray-300 dark:text-gray-300 truncate">
                             <span className="flex items-center gap-1 truncate">{filter.icon} {filter.label}</span>
-                            <span className="text-orange-500 font-mono text-[9px] min-w-[24px] text-right">
+                            <span className="text-orange-400 font-mono text-[9px] min-w-[24px] text-right font-bold">
                               {filter.display > 0 ? `+${filter.display}` : filter.display}%
                             </span>
                           </div>
@@ -1003,16 +1007,16 @@ export default function StudioMakerView() {
                             step={(filter as any).step || 1}
                             value={filter.val} 
                             onChange={e => filter.set(Number(e.target.value))} 
-                            className="w-full accent-orange-500 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
+                            className="w-full accent-orange-500 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
                           />
                         </div>
                       ))}
                     </div>
                   )}
 
-                  {/* TAB 3: Details & Sharpness (2-Column Grid) */}
+                  {/* TAB 3: Details & Sharpness */}
                   {activeTab === 'detail' && (
-                    <div className="grid grid-cols-2 gap-x-2.5 gap-y-2 animate-in fade-in duration-200">
+                    <div className="grid grid-cols-2 gap-x-2.5 gap-y-2">
                       {[
                         { label: 'শার্পনেস', icon: <Focus className="w-3 h-3"/>, val: sharpness, set: setSharpness, min: 0, max: 10, display: sharpness, step: 0.1 },
                         { label: 'স্ট্রাকচার', icon: <Sliders className="w-3 h-3"/>, val: structure, set: setStructure, min: 0, max: 10, display: structure, step: 0.1 },
@@ -1021,9 +1025,9 @@ export default function StudioMakerView() {
                         { label: 'ওপাসিটি', icon: <Sun className="w-3 h-3"/>, val: opacity, set: setOpacity, min: 0, max: 100, display: opacity }
                       ].map((filter, idx) => (
                         <div key={idx} className="flex flex-col gap-0.5">
-                          <div className="flex justify-between text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate">
+                          <div className="flex justify-between text-[10px] font-bold text-gray-300 dark:text-gray-300 truncate">
                             <span className="flex items-center gap-1 truncate">{filter.icon} {filter.label}</span>
-                            <span className="text-orange-500 font-mono text-[9px] min-w-[24px] text-right">
+                            <span className="text-orange-400 font-mono text-[9px] min-w-[24px] text-right font-bold">
                               {filter.display > 0 ? `+${filter.display}` : filter.display}%
                             </span>
                           </div>
@@ -1034,12 +1038,40 @@ export default function StudioMakerView() {
                             step={(filter as any).step || 1}
                             value={filter.val} 
                             onChange={e => filter.set(Number(e.target.value))} 
-                            className="w-full accent-orange-500 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
+                            className="w-full accent-orange-500 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
                           />
                         </div>
                       ))}
                     </div>
                   )}
+
+                  {/* TAB 4: RGB Balance */}
+                  {activeTab === 'rgb' && (
+                    <div className="flex flex-col gap-2.5">
+                      {[
+                        { label: 'রেড চ্যানেল (Red)', val: redBalance, set: setRedBalance, min: -100, max: 100, color: 'accent-red-500' },
+                        { label: 'গ্রীন চ্যানেল (Green)', val: greenBalance, set: setGreenBalance, min: -100, max: 100, color: 'accent-green-500' },
+                        { label: 'ব্লু চ্যানেল (Blue)', val: blueBalance, set: setBlueBalance, min: -100, max: 100, color: 'accent-blue-500' }
+                      ].map((rgb, idx) => (
+                        <div key={idx} className="flex flex-col gap-0.5">
+                          <div className="flex justify-between text-[10px] font-bold text-gray-300 dark:text-gray-300">
+                            <span>{rgb.label}</span>
+                            <span className="text-orange-400 font-mono text-[9px] font-bold">{rgb.val > 0 ? `+${rgb.val}` : rgb.val}%</span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min={rgb.min} 
+                            max={rgb.max} 
+                            value={rgb.val} 
+                            onChange={e => rgb.set(Number(e.target.value))} 
+                            className={`w-full ${rgb.color} h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer transition-all`} 
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* TAB 5: Transform */}
 
                   {/* TAB 4: RGB Balance */}
                   {activeTab === 'rgb' && (
