@@ -50,25 +50,27 @@ import { AlertTriangle } from 'lucide-react';
 
 type EditMode = 'manual' | 'ai';
 
-const PHOTO_DIMENSIONS: Record<string, { w: number, h: number }> = {
-  'passport': { w: 40, h: 50 },
-  'dual': { w: 60, h: 40 }, 
-  'visa': { w: 50, h: 50 }, 
-  '2r': { w: 2.5, h: 3.5 },
-  '3r': { w: 3.5, h: 5 },
-  '4r': { w: 4, h: 6 },
-  '5r': { w: 5, h: 7 },
-  '6r': { w: 6, h: 8 },
-  '8r': { w: 8, h: 10 },
+const PHOTO_DIMENSIONS: Record<string, { w: number, h: number } | null> = {
+  'original': null,
+  'passport': { w: 35, h: 45 },
+  'dual': { w: 35, h: 45 },
+  'visa': { w: 51, h: 51 }, 
+  '2r': { w: 64, h: 89 },
+  '3r': { w: 89, h: 127 },
+  '4r': { w: 102, h: 152 },
+  '5r': { w: 127, h: 178 },
+  '6r': { w: 152, h: 203 },
+  '8r': { w: 203, h: 254 },
   'a4': { w: 210, h: 297 },
-  'letter': { w: 8.5, h: 11 },
-  'epass': { w: 40, h: 50 },
-  'birth': { w: 210, h: 297 }
+  'letter': { w: 216, h: 279 },
+  'epass': { w: 35, h: 45 },
+  'birth': { w: 35, h: 45 }
 };
 
 const PHOTO_SIZES_MANUAL = [
+  { id: 'original', label: 'অরিজিনাল', icon: 'ImageIcon' },
   { id: 'passport', label: 'পাসপোর্ট', icon: 'UserSquare2' },
-  { id: 'dual', label: 'ডুয়াল', icon: 'Users' },
+  { id: 'dual', label: 'ডুয়াল', icon: 'Users' },
   { id: 'visa', label: 'ভিসা', icon: 'Plane' },
   { id: '2r', label: '2R', icon: 'RectangleVertical' },
   { id: '3r', label: '3R', icon: 'RectangleVertical' },
@@ -81,8 +83,9 @@ const PHOTO_SIZES_MANUAL = [
 ];
 
 const PHOTO_SIZES_AI = [
+  { id: 'original', label: 'অরিজিনাল', icon: 'ImageIcon' },
   { id: 'passport', label: 'পাসপোর্ট', icon: 'UserSquare2' },
-  { id: 'dual', label: 'ডুয়াল', icon: 'Users' },
+  { id: 'dual', label: 'ডুয়াল', icon: 'Users' },
   { id: 'epass', label: 'ই-পাস', icon: 'CreditCard' },
   { id: 'visa', label: 'ভিসা', icon: 'Plane' },
   { id: 'birth', label: 'জন্ম', icon: 'FileBadge' }
@@ -129,7 +132,8 @@ const DRESS_STYLES = [
 ];
 
 // Helper to calculate initial crop
-function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: number) {
+function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: number | undefined) {
+  if (!aspect) return undefined;
   return centerCrop(
     makeAspectCrop(
       { unit: '%', width: 90 },
@@ -172,20 +176,32 @@ export default function StudioMakerView() {
   const [dualImage, setDualImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
 
+  // Get the current aspect ratio for crop
+  const getCurrentAspect = useCallback(() => {
+    const dim = PHOTO_DIMENSIONS[photoSize];
+    if (!dim) return undefined; // 'original' = free crop
+    return dim.w / dim.h;
+  }, [photoSize]);
+
   // Auto-center crop when photo size changes
   useEffect(() => {
-    if (imgRef.current && photoSize && photoSize !== 'original') {
-      const dim = PHOTO_DIMENSIONS[photoSize];
-      if (dim) {
-        const { width, height } = imgRef.current;
-        if (width && height) {
-          setCrop(centerAspectCrop(width, height, dim.w / dim.h));
-        }
-      }
-    } else {
+    const dim = PHOTO_DIMENSIONS[photoSize];
+    if (!dim) {
+      // 'original' mode - no crop
       setCrop(undefined);
+      setCompletedCrop(null);
+      return;
     }
-  }, [photoSize, originalImage]);
+    if (imgRef.current) {
+      const { width, height } = imgRef.current;
+      if (width && height) {
+        const aspect = dim.w / dim.h;
+        const newCrop = centerAspectCrop(width, height, aspect);
+        setCrop(newCrop);
+        setCompletedCrop(null);
+      }
+    }
+  }, [photoSize]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -221,15 +237,15 @@ export default function StudioMakerView() {
     setProgress(0);
   };
 
-  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+  const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
     const dim = PHOTO_DIMENSIONS[photoSize];
-    if (dim) {
-      setCrop(centerAspectCrop(width, height, dim.w / dim.h));
+    if (dim && width && height) {
+      const aspect = dim.w / dim.h;
+      const newCrop = centerAspectCrop(width, height, aspect);
+      setCrop(newCrop);
     }
-  };
-
-  // Removed duplicate useEffect - already handled above
+  }, [photoSize]);
 
   const toggleInstruction = (id: string) => {
     setAiInstructions(prev => 
@@ -391,6 +407,7 @@ export default function StudioMakerView() {
   const renderIcon = (iconName: string, active: boolean = false) => {
     const props = { className: `w-6 h-6 mb-1 transition-all ${active ? 'text-orange-500' : 'opacity-70 text-gray-500 dark:text-gray-400'}` };
     switch (iconName) {
+      case 'ImageIcon': return <ImageIcon {...props} />;
       case 'Scissors': return <Scissors {...props} />;
       case 'Sparkles': return <Sparkles {...props} />;
       case 'Sun': return <Sun {...props} />;
@@ -640,7 +657,7 @@ export default function StudioMakerView() {
                           crop={crop}
                           onChange={(_, percentCrop) => setCrop(percentCrop)}
                           onComplete={(c) => setCompletedCrop(c)}
-                          aspect={PHOTO_DIMENSIONS[photoSize] ? PHOTO_DIMENSIONS[photoSize].w / PHOTO_DIMENSIONS[photoSize].h : undefined}
+                          aspect={getCurrentAspect()}
                         >
                            <img 
                              ref={imgRef}
