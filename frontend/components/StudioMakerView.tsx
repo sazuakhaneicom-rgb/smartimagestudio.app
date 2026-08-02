@@ -42,7 +42,17 @@ import {
   Minus,
   Check,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  RotateCcw,
+  RotateCw,
+  FlipHorizontal,
+  FlipVertical,
+  Undo2,
+  Redo2,
+  Sliders,
+  ShieldCheck,
+  Maximize2,
+  SlidersHorizontal
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import ReactCrop, { Crop as CropType, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
@@ -50,6 +60,16 @@ import 'react-image-crop/dist/ReactCrop.css';
 import { removeBackground } from '@imgly/background-removal';
 import { AlertTriangle } from 'lucide-react';
 import { processCanvasPipeline, getCSSFilterString, downloadCanvas, ExportFormat, ImageAdjustments } from '@/lib/imageProcessor';
+import { 
+  processAdvancedCanvas, 
+  getExtendedCSSFilterString, 
+  ManualEditorAdjustments, 
+  defaultManualAdjustments, 
+  TransformState, 
+  defaultTransformState, 
+  BackgroundConfig, 
+  defaultBackgroundConfig 
+} from '@/lib/manualEditorEngine';
 
 type EditMode = 'manual' | 'ai';
 
@@ -162,18 +182,44 @@ export default function StudioMakerView() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  // Manual Mode State (10 Full Sliders)
+  // Manual Mode State (18 Full Sliders + RGB + Transforms + Protection)
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
-  const [saturation, setSaturation] = useState(100);
-  const [sharpness, setSharpness] = useState(0);
   const [exposure, setExposure] = useState(0);
   const [highlights, setHighlights] = useState(0);
   const [shadows, setShadows] = useState(0);
+  const [whites, setWhites] = useState(0);
+  const [blacks, setBlacks] = useState(0);
+  const [gamma, setGamma] = useState(1.0);
+
   const [temperature, setTemperature] = useState(0);
   const [tint, setTint] = useState(0);
-  const [gamma, setGamma] = useState(1.0);
+  const [saturation, setSaturation] = useState(100);
+  const [vibrance, setVibrance] = useState(0);
+  const [hue, setHue] = useState(0);
+
+  const [sharpness, setSharpness] = useState(0);
+  const [structure, setStructure] = useState(0);
+  const [texture, setTexture] = useState(0);
+  const [clarity, setClarity] = useState(0);
+  const [opacity, setOpacity] = useState(100);
+
+  const [redBalance, setRedBalance] = useState(0);
+  const [greenBalance, setGreenBalance] = useState(0);
+  const [blueBalance, setBlueBalance] = useState(0);
+
+  const [faceProtection, setFaceProtection] = useState(false);
+  const [textProtection, setTextProtection] = useState(false);
+
+  // Transform State
+  const [transform, setTransform] = useState<TransformState>(defaultTransformState);
+
+  // Background State
+  const [bgConfig, setBgConfig] = useState<BackgroundConfig>(defaultBackgroundConfig);
   const [isBlurBg, setIsBlurBg] = useState(false);
+
+  // Control Tab State (Right Sidebar Tabs)
+  const [activeTab, setActiveTab] = useState<'light' | 'color' | 'detail' | 'rgb' | 'transform' | 'protection'>('light');
 
   // Zoom & Pan State
   const [zoomLevel, setZoomLevel] = useState(100);
@@ -381,25 +427,43 @@ export default function StudioMakerView() {
       };
     }
 
-    const currentAdjustments: ImageAdjustments = {
+    const currentAdjustments: ManualEditorAdjustments = {
       brightness,
       contrast,
-      saturation,
-      sharpness,
       exposure,
       highlights,
       shadows,
+      whites,
+      blacks,
+      gamma,
       temperature,
       tint,
-      gamma
+      saturation,
+      vibrance,
+      hue,
+      sharpness,
+      structure,
+      texture,
+      clarity,
+      opacity,
+      redBalance,
+      greenBalance,
+      blueBalance,
+      faceProtection,
+      textProtection
     };
 
-    return processCanvasPipeline(
+    const currentBgConfig: BackgroundConfig = isBlurBg ? { type: 'blur', color: 'transparent' } : {
+      type: bgColor === 'transparent' ? 'transparent' : 'solid',
+      color: bgColor
+    };
+
+    return processAdvancedCanvas(
       image,
       cropArea,
-      bgColor,
+      currentBgConfig,
       currentAdjustments,
-      isBlurBg
+      transform
     );
   };
 
@@ -821,47 +885,229 @@ export default function StudioMakerView() {
               </button>
             </div>
 
-            {/* Color & Light Adjustments (Manual Only) */}
+            {/* Tabbed Controls for Manual Mode */}
             {editMode === 'manual' && (
-              <div className="flex-1 flex flex-col gap-5">
-                <div>
-                  <div className="flex items-center gap-2 mb-5">
-                    <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
-                    <h3 className="font-bold text-gray-800 dark:text-gray-200">রঙ ও আলো</h3>
-                  </div>
-                  
-                  <div className="flex flex-col gap-4">
-                    {[
-                      { label: 'ব্রাইটনেস', icon: <Sun className="w-3.5 h-3.5"/>, val: brightness, set: setBrightness, min: 0, max: 200, display: brightness - 100 },
-                      { label: 'কন্ট্রাস্ট', icon: <Contrast className="w-3.5 h-3.5"/>, val: contrast, set: setContrast, min: 0, max: 200, display: contrast - 100 },
-                      { label: 'স্যাচুরেশন', icon: <Droplet className="w-3.5 h-3.5"/>, val: saturation, set: setSaturation, min: 0, max: 200, display: saturation - 100 },
-                      { label: 'শার্পনেস', icon: <Focus className="w-3.5 h-3.5"/>, val: sharpness, set: setSharpness, min: 0, max: 10, display: sharpness, step: 0.1 },
-                      { label: 'এক্সপোজার', icon: <Sun className="w-3.5 h-3.5"/>, val: exposure, set: setExposure, min: -100, max: 100, display: exposure },
-                      { label: 'হাইলাইটস', icon: <Sun className="w-3.5 h-3.5"/>, val: highlights, set: setHighlights, min: -100, max: 100, display: highlights },
-                      { label: 'শ্যাডো', icon: <Contrast className="w-3.5 h-3.5"/>, val: shadows, set: setShadows, min: -100, max: 100, display: shadows },
-                      { label: 'টেম্পারেচার', icon: <Sun className="w-3.5 h-3.5"/>, val: temperature, set: setTemperature, min: -100, max: 100, display: temperature },
-                      { label: 'টিন্ট', icon: <Droplet className="w-3.5 h-3.5"/>, val: tint, set: setTint, min: -100, max: 100, display: tint },
-                      { label: 'গামা', icon: <Focus className="w-3.5 h-3.5"/>, val: gamma, set: setGamma, min: 0.2, max: 2.2, step: 0.1, display: Math.round((gamma - 1) * 100) }
-                    ].map((filter, idx) => (
-                      <div key={idx} className="flex flex-col gap-1.5">
+              <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+                {/* Control Tabs Header */}
+                <div className="flex overflow-x-auto custom-scrollbar gap-1 p-1 bg-gray-100 dark:bg-gray-800/60 rounded-xl border border-gray-200 dark:border-gray-700/60 shrink-0">
+                  {[
+                    { id: 'light', label: 'আলো', icon: <Sun className="w-3 h-3" /> },
+                    { id: 'color', label: 'রঙ', icon: <Droplet className="w-3 h-3" /> },
+                    { id: 'detail', label: 'ডিটেইল', icon: <Focus className="w-3 h-3" /> },
+                    { id: 'rgb', label: 'RGB', icon: <Sliders className="w-3 h-3" /> },
+                    { id: 'transform', label: 'ট্রান্সফর্ম', icon: <RotateCw className="w-3 h-3" /> },
+                    { id: 'protection', label: 'সুরক্ষা', icon: <ShieldCheck className="w-3 h-3" /> }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${activeTab === tab.id ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
+                    >
+                      {tab.icon} {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-3">
+                  {/* TAB 1: Light & Exposure */}
+                  {activeTab === 'light' && (
+                    <div className="flex flex-col gap-3.5 animate-in fade-in duration-200">
+                      {[
+                        { label: 'ব্রাইটনেস', icon: <Sun className="w-3.5 h-3.5"/>, val: brightness, set: setBrightness, min: 0, max: 200, display: brightness - 100 },
+                        { label: 'কন্ট্রাস্ট', icon: <Contrast className="w-3.5 h-3.5"/>, val: contrast, set: setContrast, min: 0, max: 200, display: contrast - 100 },
+                        { label: 'এক্সপোজার', icon: <Sun className="w-3.5 h-3.5"/>, val: exposure, set: setExposure, min: -100, max: 100, display: exposure },
+                        { label: 'হাইলাইটস', icon: <Sun className="w-3.5 h-3.5"/>, val: highlights, set: setHighlights, min: -100, max: 100, display: highlights },
+                        { label: 'শ্যাডো', icon: <Contrast className="w-3.5 h-3.5"/>, val: shadows, set: setShadows, min: -100, max: 100, display: shadows },
+                        { label: 'হোয়াইটস', icon: <Sun className="w-3.5 h-3.5"/>, val: whites, set: setWhites, min: -100, max: 100, display: whites },
+                        { label: 'ব্ল্যাকস', icon: <Contrast className="w-3.5 h-3.5"/>, val: blacks, set: setBlacks, min: -100, max: 100, display: blacks },
+                        { label: 'গামা', icon: <Focus className="w-3.5 h-3.5"/>, val: gamma, set: setGamma, min: 0.2, max: 2.2, step: 0.1, display: Math.round((gamma - 1) * 100) }
+                      ].map((filter, idx) => (
+                        <div key={idx} className="flex flex-col gap-1">
+                          <div className="flex justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
+                            <span className="flex items-center gap-1.5">{filter.icon} {filter.label}</span>
+                            <span className="text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-1.5 py-0.5 rounded text-[10px] min-w-[32px] text-center font-mono">
+                              {filter.display > 0 ? `+${filter.display}` : filter.display}%
+                            </span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min={filter.min} 
+                            max={filter.max} 
+                            step={filter.step || 1}
+                            value={filter.val} 
+                            onChange={e => filter.set(Number(e.target.value))} 
+                            className="w-full accent-orange-500 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* TAB 2: Color & Tone */}
+                  {activeTab === 'color' && (
+                    <div className="flex flex-col gap-3.5 animate-in fade-in duration-200">
+                      {[
+                        { label: 'স্যাচুরেশন', icon: <Droplet className="w-3.5 h-3.5"/>, val: saturation, set: setSaturation, min: 0, max: 200, display: saturation - 100 },
+                        { label: 'ভাইব্রেন্স', icon: <Sparkles className="w-3.5 h-3.5"/>, val: vibrance, set: setVibrance, min: -100, max: 100, display: vibrance },
+                        { label: 'টেম্পারেচার (ওয়ার্মথ)', icon: <Sun className="w-3.5 h-3.5"/>, val: temperature, set: setTemperature, min: -100, max: 100, display: temperature },
+                        { label: 'টিন্ট', icon: <Droplet className="w-3.5 h-3.5"/>, val: tint, set: setTint, min: -100, max: 100, display: tint },
+                        { label: 'হিউ (Hue Shift)', icon: <Palette className="w-3.5 h-3.5"/>, val: hue, set: setHue, min: -180, max: 180, display: hue }
+                      ].map((filter, idx) => (
+                        <div key={idx} className="flex flex-col gap-1">
+                          <div className="flex justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
+                            <span className="flex items-center gap-1.5">{filter.icon} {filter.label}</span>
+                            <span className="text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-1.5 py-0.5 rounded text-[10px] min-w-[32px] text-center font-mono">
+                              {filter.display > 0 ? `+${filter.display}` : filter.display}%
+                            </span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min={filter.min} 
+                            max={filter.max} 
+                            step={(filter as any).step || 1}
+                            value={filter.val} 
+                            onChange={e => filter.set(Number(e.target.value))} 
+                            className="w-full accent-orange-500 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* TAB 3: Details & Sharpness */}
+                  {activeTab === 'detail' && (
+                    <div className="flex flex-col gap-3.5 animate-in fade-in duration-200">
+                      {[
+                        { label: 'শার্পনেস', icon: <Focus className="w-3.5 h-3.5"/>, val: sharpness, set: setSharpness, min: 0, max: 10, display: sharpness, step: 0.1 },
+                        { label: 'স্ট্রাকচার', icon: <Sliders className="w-3.5 h-3.5"/>, val: structure, set: setStructure, min: 0, max: 10, display: structure, step: 0.1 },
+                        { label: 'টেক্সচার', icon: <Focus className="w-3.5 h-3.5"/>, val: texture, set: setTexture, min: 0, max: 10, display: texture, step: 0.1 },
+                        { label: 'ক্ল্যারিটি', icon: <Sparkles className="w-3.5 h-3.5"/>, val: clarity, set: setClarity, min: -100, max: 100, display: clarity },
+                        { label: 'ওপাসিটি (স্বচ্ছতা)', icon: <Sun className="w-3.5 h-3.5"/>, val: opacity, set: setOpacity, min: 0, max: 100, display: opacity }
+                      ].map((filter, idx) => (
+                        <div key={idx} className="flex flex-col gap-1">
+                          <div className="flex justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
+                            <span className="flex items-center gap-1.5">{filter.icon} {filter.label}</span>
+                            <span className="text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-1.5 py-0.5 rounded text-[10px] min-w-[32px] text-center font-mono">
+                              {filter.display > 0 ? `+${filter.display}` : filter.display}%
+                            </span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min={filter.min} 
+                            max={filter.max} 
+                            step={filter.step || 1}
+                            value={filter.val} 
+                            onChange={e => filter.set(Number(e.target.value))} 
+                            className="w-full accent-orange-500 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* TAB 4: RGB Balance */}
+                  {activeTab === 'rgb' && (
+                    <div className="flex flex-col gap-3.5 animate-in fade-in duration-200">
+                      {[
+                        { label: 'রেড চ্যানেল (Red)', val: redBalance, set: setRedBalance, min: -100, max: 100, color: 'accent-red-500' },
+                        { label: 'গ্রীন চ্যানেল (Green)', val: greenBalance, set: setGreenBalance, min: -100, max: 100, color: 'accent-green-500' },
+                        { label: 'ব্লু চ্যানেল (Blue)', val: blueBalance, set: setBlueBalance, min: -100, max: 100, color: 'accent-blue-500' }
+                      ].map((rgb, idx) => (
+                        <div key={idx} className="flex flex-col gap-1">
+                          <div className="flex justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
+                            <span>{rgb.label}</span>
+                            <span className="text-orange-500 font-mono text-[10px]">{rgb.val > 0 ? `+${rgb.val}` : rgb.val}%</span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min={rgb.min} 
+                            max={rgb.max} 
+                            value={rgb.val} 
+                            onChange={e => rgb.set(Number(e.target.value))} 
+                            className={`w-full ${rgb.color} h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer transition-all`} 
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* TAB 5: Transform */}
+                  {activeTab === 'transform' && (
+                    <div className="flex flex-col gap-3.5 animate-in fade-in duration-200">
+                      <div className="grid grid-cols-2 gap-2">
+                        <button 
+                          onClick={() => setTransform(prev => ({ ...prev, rotation: (prev.rotation - 90 + 360) % 360 }))}
+                          className="py-2.5 px-3 bg-gray-100 dark:bg-gray-800 hover:bg-orange-500 hover:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border border-gray-200 dark:border-gray-700"
+                        >
+                          <RotateCcw className="w-4 h-4" /> ৯০° বামে
+                        </button>
+                        <button 
+                          onClick={() => setTransform(prev => ({ ...prev, rotation: (prev.rotation + 90) % 360 }))}
+                          className="py-2.5 px-3 bg-gray-100 dark:bg-gray-800 hover:bg-orange-500 hover:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border border-gray-200 dark:border-gray-700"
+                        >
+                          <RotateCw className="w-4 h-4" /> ৯০° ডানে
+                        </button>
+                        <button 
+                          onClick={() => setTransform(prev => ({ ...prev, flipH: !prev.flipH }))}
+                          className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${transform.flipH ? 'bg-orange-500 text-white border-orange-500' : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'}`}
+                        >
+                          <FlipHorizontal className="w-4 h-4" /> অনুভূমিক ফ্লিপ
+                        </button>
+                        <button 
+                          onClick={() => setTransform(prev => ({ ...prev, flipV: !prev.flipV }))}
+                          className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${transform.flipV ? 'bg-orange-500 text-white border-orange-500' : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'}`}
+                        >
+                          <FlipVertical className="w-4 h-4" /> উল্লম্ব ফ্লিপ
+                        </button>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5 mt-1">
                         <div className="flex justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
-                          <span className="flex items-center gap-1.5">{filter.icon} {filter.label}</span>
-                          <span className="text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-1.5 py-0.5 rounded text-[10px] min-w-[32px] text-center font-mono">
-                            {filter.display > 0 ? `+${filter.display}` : filter.display}%
-                          </span>
+                          <span>ফ্রি রোটেশন (Free Rotate):</span>
+                          <span className="text-orange-500 font-mono text-[10px]">{transform.rotation}°</span>
                         </div>
                         <input 
                           type="range" 
-                          min={filter.min} 
-                          max={filter.max} 
-                          step={filter.step || 1}
-                          value={filter.val} 
-                          onChange={e => filter.set(Number(e.target.value))} 
-                          className="w-full accent-orange-500 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer hover:accent-orange-400 transition-all" 
+                          min={-180} 
+                          max={180} 
+                          value={transform.rotation} 
+                          onChange={e => setTransform(prev => ({ ...prev, rotation: Number(e.target.value) }))} 
+                          className="w-full accent-orange-500 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer transition-all" 
                         />
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
+
+                  {/* TAB 6: Protection */}
+                  {activeTab === 'protection' && (
+                    <div className="flex flex-col gap-3 animate-in fade-in duration-200">
+                      <button
+                        onClick={() => {
+                          setFaceProtection(!faceProtection);
+                          showToast(!faceProtection ? 'ফেস ও স্কিন প্রটেকশন সক্রিয় হয়েছে' : 'প্রটেকশন বন্ধ করা হয়েছে');
+                        }}
+                        className={`w-full py-3 px-3.5 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${faceProtection ? 'bg-orange-50 border-orange-500 text-orange-600 dark:bg-orange-900/20' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700'}`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-orange-500" /> ফেস ও স্কিন প্রটেকশন
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-black/10 font-bold">{faceProtection ? 'অন' : 'অফ'}</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setTextProtection(!textProtection);
+                          showToast(!textProtection ? 'টেক্সট ও এজ প্রটেকশন সক্রিয় হয়েছে' : 'প্রটেকশন বন্ধ করা হয়েছে');
+                        }}
+                        className={`w-full py-3 px-3.5 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${textProtection ? 'bg-orange-50 border-orange-500 text-orange-600 dark:bg-orange-900/20' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700'}`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-indigo-500" /> টেক্সট ও এজ প্রটেকশন
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-black/10 font-bold">{textProtection ? 'অন' : 'অফ'}</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
