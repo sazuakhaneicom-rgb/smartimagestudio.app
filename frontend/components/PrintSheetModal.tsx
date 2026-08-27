@@ -203,12 +203,28 @@ export default function PrintSheetModal({ isOpen, onClose, imageSource }: PrintS
               </label>
             </div>
 
-            {/* Info Box */}
-            <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-              <h4 className="text-blue-400 text-sm font-medium mb-1">হিসাব</h4>
-              <p className="text-gray-300 text-lg font-bold">
-                {counts.total} কপি <span className="text-sm text-gray-400 font-normal">({counts.cols} × {counts.rows})</span>
-              </p>
+            {/* Info Box & Custom Copies */}
+            <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex flex-col sm:flex-row gap-4 items-center justify-between">
+              <div>
+                <h4 className="text-blue-400 text-sm font-medium mb-1">সর্বোচ্চ হিসাব</h4>
+                <p className="text-gray-300 text-lg font-bold">
+                  {counts.total} কপি <span className="text-sm text-gray-400 font-normal">({counts.cols} × {counts.rows})</span>
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <label className="text-sm font-medium text-blue-400">কত কপি প্রিন্ট করবেন?</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    max={counts.total}
+                    value={config.customCopyCount || counts.total}
+                    onChange={(e) => setConfig({...config, customCopyCount: parseInt(e.target.value) || counts.total})}
+                    className="w-20 bg-gray-900 border border-blue-500/50 rounded-lg py-1.5 px-3 text-white text-center font-bold focus:outline-none focus:border-blue-400"
+                  />
+                  <span className="text-gray-400 text-sm">কপি</span>
+                </div>
+              </div>
             </div>
 
             {/* Action Buttons */}

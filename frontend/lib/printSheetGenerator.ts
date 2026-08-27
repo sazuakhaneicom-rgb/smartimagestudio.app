@@ -4,6 +4,7 @@ export interface PrintSheetConfig {
   showCropMarks: boolean;
   spacing: number; // mm between photos
   backgroundColor: string;
+  customCopyCount?: number; // Optional limit on number of copies
 }
 
 export const SHEET_DIMENSIONS: Record<string, { w: number; h: number; name: string }> = {
@@ -106,8 +107,13 @@ export async function generatePrintSheet(
       const startY = (canvasH - gridH) / 2;
       
       // Draw grid
+      let drawnCount = 0;
+      const targetCount = config.customCopyCount && config.customCopyCount > 0 ? Math.min(config.customCopyCount, counts.total) : counts.total;
+
       for (let row = 0; row < counts.rows; row++) {
         for (let col = 0; col < counts.cols; col++) {
+          if (drawnCount >= targetCount) break;
+
           const x = startX + col * (pxPhotoW + pxSpacing);
           const y = startY + row * (pxPhotoH + pxSpacing);
           
@@ -120,7 +126,9 @@ export async function generatePrintSheet(
             ctx.lineWidth = 1; // 1px line for print guide
             ctx.strokeRect(x, y, pxPhotoW, pxPhotoH);
           }
+          drawnCount++;
         }
+        if (drawnCount >= targetCount) break;
       }
       
       resolve(canvas);

@@ -1008,8 +1008,8 @@ export default function StudioMakerView() {
                   }}
                   className="relative w-full h-full overflow-hidden flex flex-col items-center justify-center p-2 select-none min-h-0"
                 >
-                  {/* Header Bar: Current Active Size Indicator Badge + Interactive Zoom Controls */}
-                  <div className="mb-3 flex flex-wrap items-center justify-center gap-3 z-20">
+                  {/* Floating Controls: Zoom & Face Detection (Moved to bottom) */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-3 z-30 pointer-events-auto">
                     <div className="px-4 py-1.5 bg-black/60 backdrop-blur-md rounded-full text-white text-xs font-semibold flex items-center gap-2 border border-white/10 shadow-lg">
                       <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
                       <span>সাইজ: {PHOTO_DIMENSIONS[photoSize]?.name || 'অরিজিনাল'}</span>
@@ -1185,7 +1185,7 @@ export default function StudioMakerView() {
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-3 min-h-[160px]">
                   {/* TAB 1: Light & Exposure */}
                   {activeTab === 'light' && (
-                    <div className="grid grid-cols-2 gap-x-2.5 gap-y-2">
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-4 px-1">
                       {[
                         { label: 'ব্রাইটনেস', icon: <Sun className="w-3 h-3"/>, val: brightness, set: setBrightness, min: 0, max: 200, display: brightness - 100 },
                         { label: 'কন্ট্রাস্ট', icon: <Contrast className="w-3 h-3"/>, val: contrast, set: setContrast, min: 0, max: 200, display: contrast - 100 },
@@ -1196,7 +1196,7 @@ export default function StudioMakerView() {
                         { label: 'ব্ল্যাকস', icon: <Contrast className="w-3 h-3"/>, val: blacks, set: setBlacks, min: -100, max: 100, display: blacks },
                         { label: 'গামা', icon: <Focus className="w-3 h-3"/>, val: gamma, set: setGamma, min: 0.2, max: 2.2, step: 0.1, display: Math.round((gamma - 1) * 100) }
                       ].map((filter, idx) => (
-                        <div key={idx} className="flex flex-col gap-0.5">
+                        <div key={idx} className="flex flex-col gap-1.5">
                           <div className="flex justify-between text-[10px] font-bold text-gray-300 dark:text-gray-300">
                             <span className="flex items-center gap-1 truncate">{filter.icon} {filter.label}</span>
                             <span className="text-orange-400 font-mono text-[9px] min-w-[24px] text-right font-bold">
@@ -1220,7 +1220,7 @@ export default function StudioMakerView() {
 
                   {/* TAB 2: Color & Tone */}
                   {activeTab === 'color' && (
-                    <div className="grid grid-cols-2 gap-x-2.5 gap-y-2">
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-4 px-1">
                       {[
                         { label: 'স্যাচুরেশন', icon: <Droplet className="w-3 h-3"/>, val: saturation, set: setSaturation, min: 0, max: 200, display: saturation - 100 },
                         { label: 'ভাইব্রেন্স', icon: <Sparkles className="w-3 h-3"/>, val: vibrance, set: setVibrance, min: -100, max: 100, display: vibrance },
@@ -1228,7 +1228,7 @@ export default function StudioMakerView() {
                         { label: 'টিন্ট', icon: <Droplet className="w-3 h-3"/>, val: tint, set: setTint, min: -100, max: 100, display: tint },
                         { label: 'হিউ (Hue Shift)', icon: <Palette className="w-3 h-3"/>, val: hue, set: setHue, min: -180, max: 180, display: hue }
                       ].map((filter, idx) => (
-                        <div key={idx} className="flex flex-col gap-0.5">
+                        <div key={idx} className="flex flex-col gap-1.5">
                           <div className="flex justify-between text-[10px] font-bold text-gray-300 dark:text-gray-300 truncate">
                             <span className="flex items-center gap-1 truncate">{filter.icon} {filter.label}</span>
                             <span className="text-orange-400 font-mono text-[9px] min-w-[24px] text-right font-bold">
@@ -1252,7 +1252,7 @@ export default function StudioMakerView() {
 
                   {/* TAB 3: Details & Sharpness */}
                   {activeTab === 'detail' && (
-                    <div className="grid grid-cols-2 gap-x-2.5 gap-y-2">
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-4 px-1">
                       {[
                         { label: 'শার্পনেস', icon: <Focus className="w-3 h-3"/>, val: sharpness, set: setSharpness, min: 0, max: 10, display: sharpness, step: 0.1 },
                         { label: 'স্ট্রাকচার', icon: <Sliders className="w-3 h-3"/>, val: structure, set: setStructure, min: 0, max: 10, display: structure, step: 0.1 },
@@ -1260,7 +1260,7 @@ export default function StudioMakerView() {
                         { label: 'ক্ল্যারিটি', icon: <Sparkles className="w-3 h-3"/>, val: clarity, set: setClarity, min: -100, max: 100, display: clarity },
                         { label: 'ওপাসিটি', icon: <Sun className="w-3 h-3"/>, val: opacity, set: setOpacity, min: 0, max: 100, display: opacity }
                       ].map((filter, idx) => (
-                        <div key={idx} className="flex flex-col gap-0.5">
+                        <div key={idx} className="flex flex-col gap-1.5">
                           <div className="flex justify-between text-[10px] font-bold text-gray-300 dark:text-gray-300 truncate">
                             <span className="flex items-center gap-1 truncate">{filter.icon} {filter.label}</span>
                             <span className="text-orange-400 font-mono text-[9px] min-w-[24px] text-right font-bold">
@@ -1290,7 +1290,7 @@ export default function StudioMakerView() {
                         { label: 'গ্রীন চ্যানেল (Green)', val: greenBalance, set: setGreenBalance, min: -100, max: 100, color: 'accent-green-500' },
                         { label: 'ব্লু চ্যানেল (Blue)', val: blueBalance, set: setBlueBalance, min: -100, max: 100, color: 'accent-blue-500' }
                       ].map((rgb, idx) => (
-                        <div key={idx} className="flex flex-col gap-0.5">
+                        <div key={idx} className="flex flex-col gap-1.5">
                           <div className="flex justify-between text-[10px] font-bold text-gray-300 dark:text-gray-300">
                             <span>{rgb.label}</span>
                             <span className="text-orange-400 font-mono text-[9px] font-bold">{rgb.val > 0 ? `+${rgb.val}` : rgb.val}%</span>
@@ -1313,13 +1313,13 @@ export default function StudioMakerView() {
 
                   {/* TAB 4: RGB Balance */}
                   {activeTab === 'rgb' && (
-                    <div className="flex flex-col gap-2.5 animate-in fade-in duration-200">
+                    <div className="flex flex-col gap-4 animate-in fade-in duration-200 px-1">
                       {[
                         { label: 'রেড চ্যানেল (Red)', val: redBalance, set: setRedBalance, min: -100, max: 100, color: 'accent-red-500' },
                         { label: 'গ্রীন চ্যানেল (Green)', val: greenBalance, set: setGreenBalance, min: -100, max: 100, color: 'accent-green-500' },
                         { label: 'ব্লু চ্যানেল (Blue)', val: blueBalance, set: setBlueBalance, min: -100, max: 100, color: 'accent-blue-500' }
                       ].map((rgb, idx) => (
-                        <div key={idx} className="flex flex-col gap-0.5">
+                        <div key={idx} className="flex flex-col gap-1.5">
                           <div className="flex justify-between text-[10px] font-bold text-gray-500 dark:text-gray-400">
                             <span>{rgb.label}</span>
                             <span className="text-orange-500 font-mono text-[9px]">{rgb.val > 0 ? `+${rgb.val}` : rgb.val}%</span>
@@ -1439,15 +1439,15 @@ export default function StudioMakerView() {
             )}
 
             {/* Format Selector & Action Buttons */}
-            <div className="flex flex-col gap-3 mt-auto">
-              <div className="flex items-center justify-between text-xs font-bold text-gray-500 dark:text-gray-400 px-1">
+            <div className="flex flex-col gap-4 mt-auto pt-4 border-t border-gray-200 dark:border-gray-800">
+              <div className="flex flex-col xl:flex-row items-center justify-between text-xs font-bold text-gray-500 dark:text-gray-400 px-1 gap-2">
                 <span>ডাউনলোড ফরম্যাট:</span>
-                <div className="flex bg-gray-100 dark:bg-gray-800 p-0.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex bg-gray-100 dark:bg-gray-800 p-0.5 rounded-lg border border-gray-200 dark:border-gray-700 w-full xl:w-auto">
                   {(['png', 'jpeg', 'webp'] as const).map(fmt => (
                     <button
                       key={fmt}
                       onClick={() => setExportFormat(fmt)}
-                      className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase transition-all ${exportFormat === fmt ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
+                      className={`flex-1 xl:flex-none px-2.5 py-1.5 rounded-md text-[10px] font-extrabold uppercase transition-all ${exportFormat === fmt ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
                     >
                       {fmt === 'jpeg' ? 'JPG' : fmt}
                     </button>
