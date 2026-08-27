@@ -1,6 +1,7 @@
 'use client';
 
 import { detectFaces } from './faceDetectionEngine';
+import { removeBackground } from '@imgly/background-removal';
 
 export async function processAiClothingChange(
   originalImageUrl: string,
@@ -22,13 +23,21 @@ export async function processAiClothingChange(
   onProgress?.(30, 'পোশাকের বডি ও বর্ডার সেগমেন্টেশন হচ্ছে...');
   await delay(300);
 
+  // Remove white background from the dress template
+  let dressUrl = `/dresses/${dressImgName}`;
+  try {
+    const dressBlob = await removeBackground(dressUrl);
+    dressUrl = URL.createObjectURL(dressBlob);
+  } catch (e) {
+    console.warn("Failed to remove dress background:", e);
+  }
+
   const dressImg = new Image();
   dressImg.crossOrigin = 'anonymous';
-  dressImg.src = `/dresses/${dressImgName}`;
+  dressImg.src = dressUrl;
   await new Promise((resolve) => {
     dressImg.onload = resolve;
     dressImg.onerror = () => {
-      // Fallback if dress image fails to load
       resolve(null);
     };
   });
