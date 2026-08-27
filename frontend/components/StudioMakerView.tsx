@@ -52,7 +52,8 @@ import {
   Sliders,
   ShieldCheck,
   Maximize2,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Grid
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import ReactCrop, { Crop as CropType, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
@@ -72,6 +73,9 @@ import {
 } from '@/lib/manualEditorEngine';
 import { processAiClothingChange } from '@/lib/aiClothingEngine';
 import { FORMAL_CLOTHING_LIBRARY, FormalClothingOption, FormalClothingVectorIcon } from '@/lib/passportClothingAssets';
+import { detectFaces, calculatePassportCrop, FaceRegion, PassportCropResult } from '@/lib/faceDetectionEngine';
+import { useUndoRedo, EditorSnapshot } from '@/lib/undoRedoEngine';
+import PrintSheetModal from '@/components/PrintSheetModal';
 
 type EditMode = 'manual' | 'ai';
 
@@ -184,6 +188,7 @@ export default function StudioMakerView() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [processingStage, setProcessingStage] = useState<string>('');
+  const [showPrintSheet, setShowPrintSheet] = useState(false);
 
   // Manual Mode State (18 Full Sliders + RGB + Transforms + Protection)
   const [brightness, setBrightness] = useState(100);
@@ -235,12 +240,144 @@ export default function StudioMakerView() {
   const [crop, setCrop] = useState<CropType>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
 
+  const {
+    canUndo,
+    canRedo,
+    pushState,
+    undo,
+    redo,
+    historyLength,
+    currentIndex,
+  } = useUndoRedo({
+    brightness: 100,
+    contrast: 100,
+    exposure: 0,
+    highlights: 0,
+    shadows: 0,
+    whites: 0,
+    blacks: 0,
+    gamma: 1.0,
+    temperature: 0,
+    tint: 0,
+    saturation: 100,
+    vibrance: 0,
+    hue: 0,
+    sharpness: 0,
+    structure: 0,
+    texture: 0,
+    clarity: 0,
+    opacity: 100,
+    redBalance: 0,
+    greenBalance: 0,
+    blueBalance: 0,
+    faceProtection: false,
+    textProtection: false,
+    bgColor: 'transparent',
+    isBlurBg: false,
+    photoSize: 'original',
+    zoomLevel: 100,
+    exportFormat: 'png',
+    transform: defaultTransformState,
+    activeTab: 'light'
+  });
+
+  const pushSnapshot = useCallback((overridesOrEvent?: Partial<EditorSnapshot> | React.SyntheticEvent | Event) => {
+    const isEvent = overridesOrEvent && ('nativeEvent' in overridesOrEvent || 'type' in overridesOrEvent);
+    const finalOverrides = isEvent ? undefined : overridesOrEvent;
+    
+    pushState({
+      brightness, contrast, exposure, highlights, shadows, whites, blacks, gamma,
+      temperature, tint, saturation, vibrance, hue,
+      sharpness, structure, texture, clarity, opacity,
+      redBalance, greenBalance, blueBalance,
+      faceProtection, textProtection,
+      bgColor, isBlurBg,
+      photoSize, zoomLevel, exportFormat,
+      transform, activeTab,
+      ...(finalOverrides as Partial<EditorSnapshot>)
+    });
+  }, [
+    brightness, contrast, exposure, highlights, shadows, whites, blacks, gamma,
+    temperature, tint, saturation, vibrance, hue,
+    sharpness, structure, texture, clarity, opacity,
+    redBalance, greenBalance, blueBalance,
+    faceProtection, textProtection,
+    bgColor, isBlurBg,
+    photoSize, zoomLevel, exportFormat,
+  ]);
+
+  const restoreSnapshot = useCallback((snapshot: EditorSnapshot) => {
+    setBrightness(snapshot.brightness);
+    setContrast(snapshot.contrast);
+    setExposure(snapshot.exposure);
+    setHighlights(snapshot.highlights);
+    setShadows(snapshot.shadows);
+    setWhites(snapshot.whites);
+    setBlacks(snapshot.blacks);
+    setGamma(snapshot.gamma);
+    setTemperature(snapshot.temperature);
+    setTint(snapshot.tint);
+    setSaturation(snapshot.saturation);
+    setVibrance(snapshot.vibrance);
+    setHue(snapshot.hue);
+    setSharpness(snapshot.sharpness);
+    setStructure(snapshot.structure);
+    setTexture(snapshot.texture);
+    setClarity(snapshot.clarity);
+    setOpacity(snapshot.opacity);
+    setRedBalance(snapshot.redBalance);
+    setGreenBalance(snapshot.greenBalance);
+    setBlueBalance(snapshot.blueBalance);
+    setFaceProtection(snapshot.faceProtection);
+    setTextProtection(snapshot.textProtection);
+    setBgColor(snapshot.bgColor || 'transparent');
+    setIsBlurBg(snapshot.isBlurBg);
+    setPhotoSize(snapshot.photoSize);
+    setZoomLevel(snapshot.zoomLevel);
+    setExportFormat(snapshot.exportFormat as any);
+    setTransform(snapshot.transform);
+    setActiveTab(snapshot.activeTab as any);
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    const snapshot = undo();
+    if (snapshot) {
+      restoreSnapshot(snapshot);
+    }
+  }, [undo, restoreSnapshot]);
+
+  const handleRedo = useCallback(() => {
+    const snapshot = redo();
+    if (snapshot) {
+      restoreSnapshot(snapshot);
+    }
+  }, [redo, restoreSnapshot]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        handleUndo();
+      } else if (e.ctrlKey && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
+
   // AI Mode State
   const [aiDress, setAiDress] = useState<number | null>(null);
   const [aiInstructions, setAiInstructions] = useState<string[]>([]);
   const [showInstructions, setShowInstructions] = useState(true);
   const [dualImage, setDualImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
+
+  // Face Detection State
+  const [detectedFace, setDetectedFace] = useState<FaceRegion | null>(null);
+  const [showGuidelines, setShowGuidelines] = useState(false);
+  const [faceDetecting, setFaceDetecting] = useState(false);
 
   // Helper to apply crop for a given size
   const applyCropForSize = useCallback((sizeId: string) => {
@@ -293,6 +430,7 @@ export default function StudioMakerView() {
   const handlePhotoSizeChange = (sizeId: string) => {
     setPhotoSize(sizeId);
     applyCropForSize(sizeId);
+    pushSnapshot({ photoSize: sizeId });
     const dim = PHOTO_DIMENSIONS[sizeId];
     if (dim) {
       showToast(`${dim.name} সাইজ সিলেক্ট করা হয়েছে (${dim.unit})`);
@@ -309,13 +447,34 @@ export default function StudioMakerView() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setOriginalImage(URL.createObjectURL(file));
+    const imgUrl = URL.createObjectURL(file);
+    setOriginalImage(imgUrl);
     setResultImage(null);
     setBgColor('transparent');
     setCrop(undefined);
     setCompletedCrop(null);
+    // Run face detection on the new image
+    runFaceDetection(imgUrl);
     // Reset input so the same file can be re-selected
     e.target.value = '';
+  };
+
+  const runFaceDetection = async (imageSource: string) => {
+    setFaceDetecting(true);
+    try {
+      const faces = await detectFaces(imageSource);
+      if (faces.length > 0) {
+        setDetectedFace(faces[0]);
+        showToast('মুখ সনাক্ত হয়েছে ✓');
+      } else {
+        setDetectedFace(null);
+      }
+    } catch (err) {
+      console.warn('Face detection error:', err);
+      setDetectedFace(null);
+    } finally {
+      setFaceDetecting(false);
+    }
   };
 
   const handleDualFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -350,7 +509,25 @@ export default function StudioMakerView() {
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     applyCropForSize(photoSize);
-  }, [photoSize, applyCropForSize]);
+    // Auto-apply face-based crop if face is detected and a passport size is selected
+    if (detectedFace && photoSize !== 'original') {
+      const imgEl = e.target as HTMLImageElement;
+      const dim = PHOTO_DIMENSIONS[photoSize];
+      if (dim && imgEl.naturalWidth > 0) {
+        const aspect = dim.w / dim.h;
+        const result = calculatePassportCrop(detectedFace, imgEl.naturalWidth, imgEl.naturalHeight, aspect);
+        setCrop(result.percentCrop as any);
+        const pixelCrop = {
+          unit: 'px' as const,
+          x: result.cropX * (imgEl.width / imgEl.naturalWidth),
+          y: result.cropY * (imgEl.height / imgEl.naturalHeight),
+          width: result.cropWidth * (imgEl.width / imgEl.naturalWidth),
+          height: result.cropHeight * (imgEl.height / imgEl.naturalHeight),
+        };
+        setCompletedCrop(pixelCrop);
+      }
+    }
+  }, [photoSize, applyCropForSize, detectedFace]);
 
   const toggleInstruction = (id: string) => {
     setAiInstructions(prev => 
@@ -399,6 +576,7 @@ export default function StudioMakerView() {
 
       setResultImage(generatedImage);
       setDualImage(originalImage);
+      pushSnapshot();
       showToast(`"${dress.label}" সফলভাবে তৈরি করা হয়েছে!`);
     } catch (err) {
       console.error('AI Clothing error:', err);
@@ -427,6 +605,7 @@ export default function StudioMakerView() {
       
       const noBgUrl = URL.createObjectURL(blob);
       setResultImage(noBgUrl);
+      pushSnapshot();
       setIsProcessing(false);
     } catch (error) {
       console.error(error);
@@ -437,6 +616,7 @@ export default function StudioMakerView() {
 
   const handleBgColorClick = async (color: string) => {
     setBgColor(color);
+    pushSnapshot({ bgColor: color });
     if (!resultImage && originalImage) {
       await processAutoRemoveBg();
     }
@@ -769,9 +949,25 @@ export default function StudioMakerView() {
           
           <div className="absolute top-4 right-4 z-10 flex gap-2">
              {originalImage && (
-               <button onClick={clearWorkspace} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md text-xs font-bold flex items-center gap-2 transition-all border border-white/10 shadow-lg">
-                 <RefreshCw className="w-3.5 h-3.5" /> ক্লিয়ার
-               </button>
+               <>
+                 <button 
+                   onClick={handleUndo} 
+                   disabled={!canUndo}
+                   className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md text-xs font-bold flex items-center gap-1.5 transition-all border border-white/10 shadow-lg disabled:opacity-30 disabled:cursor-not-allowed"
+                 >
+                   <Undo2 className="w-4 h-4" /> আনডু
+                 </button>
+                 <button 
+                   onClick={handleRedo} 
+                   disabled={!canRedo}
+                   className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md text-xs font-bold flex items-center gap-1.5 transition-all border border-white/10 shadow-lg disabled:opacity-30 disabled:cursor-not-allowed"
+                 >
+                   <Redo2 className="w-4 h-4" /> রিডু
+                 </button>
+                 <button onClick={clearWorkspace} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md text-xs font-bold flex items-center gap-2 transition-all border border-white/10 shadow-lg">
+                   <RefreshCw className="w-3.5 h-3.5" /> ক্লিয়ার
+                 </button>
+               </>
              )}
           </div>
 
@@ -845,6 +1041,27 @@ export default function StudioMakerView() {
                         ফিট
                       </button>
                     </div>
+
+                    {/* Face Detection Badge & Guideline Toggle */}
+                    {detectedFace && (
+                      <div className="px-3 py-1 bg-black/60 backdrop-blur-md rounded-full text-white text-xs flex items-center gap-2 border border-white/10 shadow-lg">
+                        <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                        <span className="text-green-400 font-bold text-[10px]">মুখ সনাক্ত</span>
+                        <button 
+                          onClick={() => setShowGuidelines(!showGuidelines)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${showGuidelines ? 'bg-orange-500 text-white' : 'bg-white/10 hover:bg-white/20 text-gray-200'}`}
+                          title="পাসপোর্ট গাইডলাইন"
+                        >
+                          গাইড {showGuidelines ? '✓' : ''}
+                        </button>
+                      </div>
+                    )}
+                    {faceDetecting && (
+                      <div className="px-3 py-1 bg-black/60 backdrop-blur-md rounded-full text-white text-xs flex items-center gap-2 border border-white/10 shadow-lg">
+                        <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></div>
+                        <span className="text-yellow-400 font-bold text-[10px]">মুখ খুঁজছে...</span>
+                      </div>
+                    )}
                   </div>
 
                   {isProcessing ? (
@@ -988,6 +1205,7 @@ export default function StudioMakerView() {
                           </div>
                           <input 
                             type="range" 
+                            onPointerUp={pushSnapshot} 
                             min={filter.min} 
                             max={filter.max} 
                             step={(filter as any).step || 1}
@@ -1019,6 +1237,7 @@ export default function StudioMakerView() {
                           </div>
                           <input 
                             type="range" 
+                            onPointerUp={pushSnapshot} 
                             min={filter.min} 
                             max={filter.max} 
                             step={(filter as any).step || 1}
@@ -1050,6 +1269,7 @@ export default function StudioMakerView() {
                           </div>
                           <input 
                             type="range" 
+                            onPointerUp={pushSnapshot} 
                             min={filter.min} 
                             max={filter.max} 
                             step={(filter as any).step || 1}
@@ -1077,6 +1297,7 @@ export default function StudioMakerView() {
                           </div>
                           <input 
                             type="range" 
+                            onPointerUp={pushSnapshot} 
                             min={rgb.min} 
                             max={rgb.max} 
                             value={rgb.val} 
@@ -1105,6 +1326,7 @@ export default function StudioMakerView() {
                           </div>
                           <input 
                             type="range" 
+                            onPointerUp={pushSnapshot} 
                             min={rgb.min} 
                             max={rgb.max} 
                             value={rgb.val} 
@@ -1121,25 +1343,41 @@ export default function StudioMakerView() {
                     <div className="flex flex-col gap-3.5 animate-in fade-in duration-200">
                       <div className="grid grid-cols-2 gap-2">
                         <button 
-                          onClick={() => setTransform(prev => ({ ...prev, rotation: (prev.rotation - 90 + 360) % 360 }))}
+                          onClick={() => {
+                            const newTransform = { ...transform, rotation: (transform.rotation - 90 + 360) % 360 };
+                            setTransform(newTransform);
+                            pushSnapshot({ transform: newTransform });
+                          }}
                           className="py-2.5 px-3 bg-gray-100 dark:bg-gray-800 hover:bg-orange-500 hover:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border border-gray-200 dark:border-gray-700"
                         >
                           <RotateCcw className="w-4 h-4" /> ৯০° বামে
                         </button>
                         <button 
-                          onClick={() => setTransform(prev => ({ ...prev, rotation: (prev.rotation + 90) % 360 }))}
+                          onClick={() => {
+                            const newTransform = { ...transform, rotation: (transform.rotation + 90) % 360 };
+                            setTransform(newTransform);
+                            pushSnapshot({ transform: newTransform });
+                          }}
                           className="py-2.5 px-3 bg-gray-100 dark:bg-gray-800 hover:bg-orange-500 hover:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border border-gray-200 dark:border-gray-700"
                         >
                           <RotateCw className="w-4 h-4" /> ৯০° ডানে
                         </button>
                         <button 
-                          onClick={() => setTransform(prev => ({ ...prev, flipH: !prev.flipH }))}
+                          onClick={() => {
+                            const newTransform = { ...transform, flipH: !transform.flipH };
+                            setTransform(newTransform);
+                            pushSnapshot({ transform: newTransform });
+                          }}
                           className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${transform.flipH ? 'bg-orange-500 text-white border-orange-500' : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'}`}
                         >
                           <FlipHorizontal className="w-4 h-4" /> অনুভূমিক ফ্লিপ
                         </button>
                         <button 
-                          onClick={() => setTransform(prev => ({ ...prev, flipV: !prev.flipV }))}
+                          onClick={() => {
+                            const newTransform = { ...transform, flipV: !transform.flipV };
+                            setTransform(newTransform);
+                            pushSnapshot({ transform: newTransform });
+                          }}
                           className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${transform.flipV ? 'bg-orange-500 text-white border-orange-500' : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'}`}
                         >
                           <FlipVertical className="w-4 h-4" /> উল্লম্ব ফ্লিপ
@@ -1153,6 +1391,7 @@ export default function StudioMakerView() {
                         </div>
                         <input 
                           type="range" 
+                          onPointerUp={() => pushSnapshot()}
                           min={-180} 
                           max={180} 
                           value={transform.rotation} 
@@ -1169,6 +1408,7 @@ export default function StudioMakerView() {
                       <button
                         onClick={() => {
                           setFaceProtection(!faceProtection);
+                          pushSnapshot({ faceProtection: !faceProtection });
                           showToast(!faceProtection ? 'ফেস ও স্কিন প্রটেকশন সক্রিয় হয়েছে' : 'প্রটেকশন বন্ধ করা হয়েছে');
                         }}
                         className={`w-full py-3 px-3.5 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${faceProtection ? 'bg-orange-50 border-orange-500 text-orange-600 dark:bg-orange-900/20' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700'}`}
@@ -1182,6 +1422,7 @@ export default function StudioMakerView() {
                       <button
                         onClick={() => {
                           setTextProtection(!textProtection);
+                          pushSnapshot({ textProtection: !textProtection });
                           showToast(!textProtection ? 'টেক্সট ও এজ প্রটেকশন সক্রিয় হয়েছে' : 'প্রটেকশন বন্ধ করা হয়েছে');
                         }}
                         className={`w-full py-3 px-3.5 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${textProtection ? 'bg-orange-50 border-orange-500 text-orange-600 dark:bg-orange-900/20' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700'}`}
@@ -1220,6 +1461,9 @@ export default function StudioMakerView() {
               <button onClick={handlePrint} className="w-full py-3.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-bold rounded-xl flex items-center justify-center gap-2 border border-blue-200 dark:border-blue-800/50 transition-colors shadow-sm">
                 <Printer className="w-4 h-4" /> প্রিন্ট
               </button>
+              <button onClick={() => setShowPrintSheet(true)} className="w-full py-3.5 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/40 text-purple-600 dark:text-purple-400 font-bold rounded-xl flex items-center justify-center gap-2 border border-purple-200 dark:border-purple-800/50 transition-colors shadow-sm">
+                <Grid className="w-4 h-4" /> প্রিন্ট শিট তৈরি করুন
+              </button>
               <button 
                 onClick={async () => {
                   const canvas = await getProcessedCanvas();
@@ -1245,6 +1489,11 @@ export default function StudioMakerView() {
           </div>
         )}
       </div>
+      <PrintSheetModal 
+        isOpen={showPrintSheet} 
+        onClose={() => setShowPrintSheet(false)} 
+        imageSource={resultImage || originalImage} 
+      />
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-300">
