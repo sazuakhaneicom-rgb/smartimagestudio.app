@@ -1,5 +1,7 @@
 'use client';
 
+import { detectFaces } from './faceDetectionEngine';
+
 export async function processAiClothingChange(
   originalImageUrl: string,
   dressImgName: string,
@@ -43,19 +45,45 @@ export async function processAiClothingChange(
   // 1. Draw base portrait image
   ctx.drawImage(origImg, 0, 0, canvas.width, canvas.height);
 
-  // 2. Align & Blend selected dress overlay
+  // 2. Detect face to align the dress properly
+  const faces = await detectFaces(originalImageUrl);
+  const face = faces && faces.length > 0 ? faces[0] : null;
+
+  // 3. Align & Blend selected dress overlay
   if (dressImg.complete && dressImg.naturalWidth > 0) {
-    const headHeightEstimate = canvas.height * 0.35; // Head usually takes top 35%
-    const bodyY = headHeightEstimate * 0.85; // Place dress right at neck/chin transition
-    const bodyHeight = canvas.height - bodyY;
+    let dressX = 0;
+    let dressY = canvas.height * 0.35 * 0.85; // fallback
+    let dressWidth = canvas.width;
+    let dressHeight = canvas.height - dressY;
+
+    if (face) {
+      const faceBottom = face.y + face.height;
+      
+      // Calculate dress scale. A standard suit/shirt shoulder is ~3-4x head width.
+      // Also ensure it covers the canvas width for passport photos.
+      dressWidth = Math.max(canvas.width, face.width * 4.2);
+      
+      // Calculate aspect ratio of dress
+      const dressAspect = dressImg.naturalHeight / dressImg.naturalWidth;
+      dressHeight = dressWidth * dressAspect;
+
+      // Center horizontally with the face
+      dressX = face.centerX - (dressWidth / 2);
+      
+      // Place the top of the dress image (collar) just covering the chin
+      dressY = faceBottom - (face.height * 0.25);
+      
+      // Ensure the dress reaches the bottom of the canvas
+      if (dressY + dressHeight < canvas.height) {
+        dressHeight = canvas.height - dressY;
+        // recalculate width to maintain aspect
+        dressWidth = dressHeight / dressAspect;
+        dressX = face.centerX - (dressWidth / 2); // recenter
+      }
+    }
 
     ctx.save();
-    // Soft feathering mask at neck boundary
-    const grad = ctx.createLinearGradient(0, bodyY, 0, bodyY + 30);
-    grad.addColorStop(0, 'rgba(0,0,0,0)');
-    grad.addColorStop(1, 'rgba(0,0,0,1)');
-
-    ctx.drawImage(dressImg, 0, bodyY, canvas.width, bodyHeight);
+    ctx.drawImage(dressImg, dressX, dressY, dressWidth, dressHeight);
     ctx.restore();
   }
 
